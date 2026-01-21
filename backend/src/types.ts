@@ -1,14 +1,17 @@
+import type { ResultSetHeader } from "mysql2";
 import type { users } from "./db/schema/user";
-import type { MySqlRawQueryResult } from "drizzle-orm/mysql2";
+import type { otps } from "./db/schema/otp";
 
 export type JWTPayload = {
-  email: string,
-  matricNo: number,
-  sessionId: string,
-}
+  email: string;
+  matricNo: number;
+  sessionId: string;
+};
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+
+export type NewOtp = typeof otps.$inferInsert;
 
 export type loginOptions = {
   email: string;
@@ -25,28 +28,26 @@ export type userOptions = {
 type tokenizedUser = {
   user: User;
   token: string;
-}
+};
 
 type avatarUser = {
-  user: User;
+  user: ResultSetHeader;
   newUrl: string;
 };
 
+export type Table = typeof users | typeof otps;
+export type Values = NewUser | NewOtp;
+
 export interface UserService {
-  createUser: (payload: userOptions) => Promise<MySqlRawQueryResult>;
-  login: (payload: loginOptions) => Promise<tokenizedUser>;
+  createUser: (payload: userOptions) => Promise<Partial<NewUser>>;
+  login: (
+    payload: loginOptions,
+  ) => Promise<{ user: Partial<User>; token: string }>;
   logout: (payload: any) => Promise<void>;
-  updateUserInfo: (
-    id: string,
-    paylaod: Partial<User>
-  ) => Promise<NewUser>;
-  updatePassword: (id: string, password: string) => Promise<NewUser>;
-  deleteUser: (id: string) => Promise<NewUser>;
-  getSpecificUser: (id: string) => Promise<NewUser>;
-  uploadAvatar: (
-    id: string,
-    file: File
-  ) => Promise<avatarUser>;
-  createOTP: () => Promise<string>;
-  verifyOTP: () => Promise<boolean>;
+  updateUserName: (id: string, name: string) => Promise<ResultSetHeader>;
+  updatePassword: (id: string, password: string) => Promise<ResultSetHeader>;
+  deleteUser: (id: string) => Promise<ResultSetHeader>;
+  uploadAvatar: (id: string, file: File) => Promise<avatarUser>;
+  createOTP: (userId: string) => Promise<number>;
+  verifyOTP: (userId: string, otp: number) => Promise<boolean>;
 }
