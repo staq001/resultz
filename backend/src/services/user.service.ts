@@ -109,14 +109,14 @@ export class UserService implements US {
 
   async updateUserName(id: string, name: string) {
     try {
-      const [user] = await db
+      const [result] = await db
         .update(users)
         .set({ name })
         .where(eq(users.id, id));
-      if (!user) throw new NotFound("User not found");
+      if (!result) throw new NotFound("User not found");
 
       logger.info("User info updated...");
-      return user;
+      return result;
     } catch (e) {
       if (e instanceof NotFound) throw e;
 
@@ -127,14 +127,14 @@ export class UserService implements US {
 
   async updatePassword(id: string, password: string) {
     try {
-      const [user] = await db
+      const [result] = await db
         .update(users)
-        .set({ password })
+        .set({ password: hashPassword(password) })
         .where(eq(users.id, id));
-      if (!user) throw new NotFound(`User doesn't exist`);
+      if (!result) throw new NotFound(`User doesn't exist`);
 
       logger.info("User password updated...");
-      return user;
+      return result;
     } catch (e) {
       if (e instanceof NotFound) throw e;
 
@@ -145,14 +145,14 @@ export class UserService implements US {
 
   async deleteUser(id: string) {
     try {
-      const [user] = await db
+      const [result] = await db
         .update(users)
         .set({ softDeleted: true })
         .where(eq(users.id, id));
-      if (!user) throw new NotFound(`User doesn't exist`);
+      if (!result) throw new NotFound(`User doesn't exist`);
 
       logger.info("User successfully deleted");
-      return user;
+      return result;
     } catch (e) {
       if (e instanceof NotFound) throw e;
       logger.error(`Error deleting user...`);

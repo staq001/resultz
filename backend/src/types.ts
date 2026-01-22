@@ -1,6 +1,7 @@
 import type { ResultSetHeader } from "mysql2";
 import type { users } from "./db/schema/user";
 import type { otps } from "./db/schema/otp";
+import type { courses } from "./db/schema/course";
 
 export type JWTPayload = {
   email: string;
@@ -8,10 +9,13 @@ export type JWTPayload = {
   sessionId: string;
 };
 
+type table = typeof users | typeof otps | typeof courses;
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
 export type NewOtp = typeof otps.$inferInsert;
+export type NewCourse = typeof courses.$inferInsert;
 
 export type loginOptions = {
   email: string;
@@ -35,8 +39,8 @@ type avatarUser = {
   newUrl: string;
 };
 
-export type Table = typeof users | typeof otps;
-export type Values = NewUser | NewOtp;
+export type Table = table;
+export type Values = NewUser | NewOtp | NewCourse;
 
 export interface UserService {
   createUser: (payload: userOptions) => Promise<Partial<NewUser>>;
@@ -51,3 +55,7 @@ export interface UserService {
   createOTP: (userId: string) => Promise<number>;
   verifyOTP: (userId: string, otp: number) => Promise<boolean>;
 }
+
+/************************* COURSES */
+
+export 
