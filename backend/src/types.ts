@@ -2,6 +2,7 @@ import type { ResultSetHeader } from "mysql2";
 import type { users } from "./db/schema/user";
 import type { otps } from "./db/schema/otp";
 import type { courses } from "./db/schema/course";
+import { departments } from "./db/schema/department";
 
 export type JWTPayload = {
   email: string;
@@ -9,7 +10,7 @@ export type JWTPayload = {
   sessionId: string;
 };
 
-type table = typeof users | typeof otps | typeof courses;
+type table = typeof users | typeof otps | typeof courses | typeof departments;
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -39,7 +40,7 @@ type avatarUser = {
 };
 
 export type Table = table;
-export type Values = NewUser | NewOtp | NewCourse;
+export type Values = NewUser | NewOtp | NewCourse | NewDepartment;
 
 export interface UserService {
   createUser: (payload: userOptions) => Promise<Partial<NewUser>>;
@@ -75,16 +76,36 @@ export interface CourseService {
     department: string,
     limit: number,
     page: number,
-  ) => Promise<{ page: number; limit: number; courses: Course[] }>;
+  ) => Promise<{ page: number; totalPages: number; courses: Course[] }>;
   findCoursesBySemester: (
     payload: FindCoursesBySemester,
     page: number,
     limit: number,
-  ) => Promise<{ page: number; limit: number; courses: Course[] }>;
+  ) => Promise<{ page: number; totalPages: number; courses: Course[] }>;
   findCoursesByYear: (
     department: string,
     year: number,
     page: number,
     limit: number,
-  ) => Promise<{ page: number; limit: number; courses: Course[] }>;
+  ) => Promise<{ page: number; totalPages: number; courses: Course[] }>;
+}
+
+/** DEPARTMENT */
+
+export type NewDepartment = typeof departments.$inferInsert;
+export type Department = typeof departments.$inferInsert;
+
+export interface DepartmentService {
+  createDepartment: (payload: NewDepartment) => Promise<Values>;
+  updateDepartmentName: (name: string, faculty: string) => Promise<void>;
+  getDepartmentById: (
+    departmentId: string,
+    faculty: string,
+  ) => Promise<Department>;
+  getAllDepartments: (
+    faculty: string,
+    page: number,
+    limit: number,
+  ) => Promise<{ page: number; totalPages: number; departments: Department[] }>;
+  deleteDepartment: (departmentId: string) => Promise<void>;
 }

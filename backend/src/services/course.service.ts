@@ -87,7 +87,11 @@ export class CourseService implements CS {
       if (!allCourses || allCourses.length === 0)
         throw new NotFound("No courses found");
 
-      return { limit, page, courses: allCourses };
+      return {
+        totalPages: Math.ceil(count / limit),
+        page,
+        courses: allCourses,
+      };
     } catch (e) {
       if (e instanceof NotFound) throw e;
       throw new InternalServerError("Error fetching all courses");
@@ -107,7 +111,7 @@ export class CourseService implements CS {
     const skip = (page - 1) * limit;
 
     try {
-      const total = await db
+      const [total] = await db
         .select({ count: sql<number>`count(*)` })
         .from(courses)
         .where(
@@ -118,7 +122,7 @@ export class CourseService implements CS {
           ),
         );
 
-      const count = total[0]?.count;
+      const count = total?.count;
       if (!count || count === 0) throw new NotFound("No courses found");
 
       const allCourses = await db
@@ -137,7 +141,11 @@ export class CourseService implements CS {
       if (!allCourses || allCourses.length === 0)
         throw new NotFound("No courses found");
 
-      return { limit, page, courses: allCourses };
+      return {
+        totalPages: Math.ceil(count / limit),
+        page,
+        courses: allCourses,
+      };
     } catch (e) {
       if (e instanceof NotFound) throw e;
       throw new InternalServerError("Error fetching all courses");
@@ -178,7 +186,11 @@ export class CourseService implements CS {
       if (!allCourses || allCourses.length === 0)
         throw new NotFound("No courses found");
 
-      return { limit, page, courses: allCourses };
+      return {
+        totalPages: Math.ceil(count / limit),
+        page,
+        courses: allCourses,
+      };
     } catch (e) {
       if (e instanceof NotFound) throw e;
       throw new InternalServerError("Error fetching all courses");

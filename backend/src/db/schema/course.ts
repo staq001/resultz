@@ -1,7 +1,7 @@
 import { mysqlTable, varchar, timestamp, int } from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
 import { users } from "./user";
-import { department } from "./department";
+import { departments } from "./department";
 
 export const courses = mysqlTable("courses", {
   id: varchar("id", { length: 36 })
@@ -13,7 +13,7 @@ export const courses = mysqlTable("courses", {
   title: varchar("title", { length: 255 }).notNull(),
   department_id: varchar("department", { length: 255 })
     .notNull()
-    .references(() => department.id),
+    .references(() => departments.id),
   semester: int("semester").notNull(),
   year: int("year").notNull(),
   createdBy: varchar("created_by", { length: 255 })
