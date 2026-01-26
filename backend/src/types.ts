@@ -15,7 +15,6 @@ export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
 export type NewOtp = typeof otps.$inferInsert;
-export type NewCourse = typeof courses.$inferInsert;
 
 export type loginOptions = {
   email: string;
@@ -58,4 +57,34 @@ export interface UserService {
 
 /************************* COURSES */
 
-export 
+export type NewCourse = typeof courses.$inferInsert;
+export type Course = typeof courses.$inferSelect;
+
+export type FindCoursesBySemester = {
+  department: string;
+  semester: number;
+  year: number;
+};
+
+export interface CourseService {
+  addCourse: (course: NewCourse, userId: string) => Promise<Partial<NewUser>>;
+  deleteCourse: (courseId: string) => Promise<void>;
+  updateCourse: (courseId: string, values: NewCourse) => Promise<void>;
+  findSpecificCourse: (courseId: string) => Promise<Course>;
+  getAllCourses: (
+    department: string,
+    limit: number,
+    page: number,
+  ) => Promise<{ page: number; limit: number; courses: Course[] }>;
+  findCoursesBySemester: (
+    payload: FindCoursesBySemester,
+    page: number,
+    limit: number,
+  ) => Promise<{ page: number; limit: number; courses: Course[] }>;
+  findCoursesByYear: (
+    department: string,
+    year: number,
+    page: number,
+    limit: number,
+  ) => Promise<{ page: number; limit: number; courses: Course[] }>;
+}
