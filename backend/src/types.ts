@@ -70,7 +70,6 @@ export type NewCourse = typeof courses.$inferInsert;
 export type Course = typeof courses.$inferSelect;
 
 export type FindCoursesBySemester = {
-  department: string;
   semester: number;
   year: number;
 };
@@ -84,17 +83,6 @@ export interface CourseService {
     department: string,
     limit: number,
     page: number,
-  ) => Promise<{ page: number; totalPages: number; courses: Course[] }>;
-  findCoursesBySemester: (
-    payload: FindCoursesBySemester,
-    page: number,
-    limit: number,
-  ) => Promise<{ page: number; totalPages: number; courses: Course[] }>;
-  findCoursesByYear: (
-    department: string,
-    year: number,
-    page: number,
-    limit: number,
   ) => Promise<{ page: number; totalPages: number; courses: Course[] }>;
 }
 
@@ -132,4 +120,18 @@ export type EmailPayload = {
   toEmail: string;
   subject: string;
   html: string;
+};
+
+/** REGISTRATION */
+export type RegisterCourse = {
+  userId: string;
+  courseId: string;
+  semester: number;
+  year: number;
+};
+
+export type CheckRegisteredCourses = {
+  userId: string;
+  semester: number;
+  year: number;
 };
