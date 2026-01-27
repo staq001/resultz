@@ -3,6 +3,7 @@ import type { users } from "./db/schema/user";
 import type { otps } from "./db/schema/otp";
 import type { courses } from "./db/schema/course";
 import { departments } from "./db/schema/department";
+import { emails } from "./db/schema/email";
 
 export type JWTPayload = {
   email: string;
@@ -10,7 +11,14 @@ export type JWTPayload = {
   sessionId: string;
 };
 
-type table = typeof users | typeof otps | typeof courses | typeof departments;
+export type UserType = "user" | "admin";
+
+type table =
+  | typeof users
+  | typeof otps
+  | typeof courses
+  | typeof departments
+  | typeof emails;
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -40,7 +48,7 @@ type avatarUser = {
 };
 
 export type Table = table;
-export type Values = NewUser | NewOtp | NewCourse | NewDepartment;
+export type Values = NewUser | NewOtp | NewCourse | NewDepartment | NewEmail;
 
 export interface UserService {
   createUser: (payload: userOptions) => Promise<Partial<NewUser>>;
@@ -109,3 +117,19 @@ export interface DepartmentService {
   ) => Promise<{ page: number; totalPages: number; departments: Department[] }>;
   deleteDepartment: (departmentId: string) => Promise<void>;
 }
+
+/** EMAILS */
+export type NewEmail = typeof emails.$inferInsert;
+export type Email = typeof emails.$inferSelect;
+
+export interface EmailQueuePayload {
+  templateId: string;
+  recipient: string;
+  variables?: Record<string, any>;
+}
+export type EmailPayload = {
+  from: string;
+  toEmail: string;
+  subject: string;
+  html: string;
+};

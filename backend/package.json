@@ -10,11 +10,14 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@getbrevo/brevo": "3.0.1",
     "argon2": "0.44.0",
+    "bull": "4.16.5",
     "cloudinary": "2.9.0",
     "dayjs": "1.11.19",
     "drizzle-kit": "0.31.8",
     "drizzle-orm": "0.45.1",
+    "handlebars": "4.7.8",
     "hono": "4.11.4",
     "jose": "6.1.3",
     "mysql2": "3.16.1",
