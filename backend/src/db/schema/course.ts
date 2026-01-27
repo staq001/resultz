@@ -14,8 +14,6 @@ export const courses = mysqlTable("courses", {
   department_id: varchar("department", { length: 255 })
     .notNull()
     .references(() => departments.id),
-  semester: int("semester").notNull(),
-  year: int("year").notNull(),
   createdBy: varchar("created_by", { length: 255 })
     .notNull()
     .references(() => users.id),
