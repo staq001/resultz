@@ -1,23 +1,14 @@
-import type {
-  NewCourse,
-  Values,
-  Table,
-  FindCoursesBySemester,
-  CourseService as CS,
-} from "../types";
+import type { NewCourse, Values, Table, CourseService as CS } from "../types";
 import { courses } from "../db/schema/course";
 import { db } from "../db/mysql";
 import { InternalServerError, NotFound } from "../utils/error";
 import { logger } from "../utils/logger";
-import { and, eq, sql } from "drizzle-orm";
+import { eq, getTableColumns, sql } from "drizzle-orm";
 
 export class CourseService implements CS {
-  async addCourse(courseValues: NewCourse, userId: string) {
+  async addCourse(courseValues: NewCourse) {
     try {
-      const { values } = await this.insertWithContext(courses, {
-        ...courseValues,
-        createdBy: userId,
-      });
+      const { values } = await this.insertWithContext(courses, courseValues);
       logger.info("Course created...");
       return values;
     } catch (e) {
@@ -36,7 +27,7 @@ export class CourseService implements CS {
     }
   }
 
-  async updateCourse(courseId: string, values: NewCourse) {
+  async updateCourse(courseId: string, values: Partial<NewCourse>) {
     try {
       await db
         .update(courses)
@@ -50,12 +41,16 @@ export class CourseService implements CS {
 
   async findSpecificCourse(courseId: string) {
     try {
+      const { id, title, courseCode, departmentId, units } =
+        getTableColumns(courses);
+
       const [course] = await db
-        .select()
+        .select({ id, title, courseCode, departmentId, units })
         .from(courses)
         .where(eq(courses.id, courseId));
 
       if (!course) throw new NotFound("Course doesn't exist");
+
       return course;
     } catch (e) {
       if (e instanceof NotFound) throw e;
@@ -63,7 +58,7 @@ export class CourseService implements CS {
     }
   }
 
-  async getAllCourses(department: string, limit: number, page: number) {
+  async getAllCourses(department_id: string, limit: number, page: number) {
     page = page || 1;
     limit = limit || 10;
 
@@ -73,15 +68,17 @@ export class CourseService implements CS {
       const total = await db
         .select({ count: sql<number>`count(*)` })
         .from(courses)
-        .where(eq(courses.department_id, department));
+        .where(eq(courses.departmentId, department_id));
 
       const count = total[0]?.count;
       if (!count || count === 0) throw new NotFound("No courses found");
 
+      const { id, title, courseCode, departmentId, units } =
+        getTableColumns(courses);
       const allCourses = await db
-        .select()
+        .select({ id, title, courseCode, departmentId, units })
         .from(courses)
-        .where(eq(courses.department_id, department))
+        .where(eq(courses.departmentId, department_id))
         .limit(limit)
         .offset(skip);
       if (!allCourses || allCourses.length === 0)
@@ -100,8 +97,12 @@ export class CourseService implements CS {
 
   private async insertWithContext(table: Table, values: Values) {
     try {
-      const result = await db.insert(table).values(values);
-      return { result, values };
+      const [result] = await db.insert(table).values(values);
+
+      if (!result || result.affectedRows !== 1)
+        throw new InternalServerError("Insert failed: no rows were inserted");
+
+      return { values };
     } catch (err) {
       throw err;
     }

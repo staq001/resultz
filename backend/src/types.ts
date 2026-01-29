@@ -13,6 +13,24 @@ import type {
   updateSchema,
   verifyOtpSchema,
 } from "./schema/user.schema";
+import type {
+  addCourseSchema,
+  updateCourseSchema,
+} from "./schema/courses.schema";
+
+interface reqUser {
+  id: string;
+  name: string;
+  matricNo: number;
+  email: string;
+  avatar: string | null;
+}
+
+export interface AppEnv extends Env {
+  Variables: {
+    user: reqUser;
+  };
+}
 
 type SignupSchema = z.infer<typeof signupSchema>;
 type LoginSchema = z.infer<typeof loginSchema>;
@@ -22,31 +40,33 @@ type VerifyOtpSchema = z.infer<typeof verifyOtpSchema>;
 
 export type SignupContext = Context<
   Env,
-  "/signup",
+  any,
   { in: { json: SignupSchema }; out: { json: SignupSchema } }
 >;
 
+export type GetUserContext = Context<AppEnv, any>;
+
 export type LoginContext = Context<
   Env,
-  "/login",
+  any,
   { in: { json: LoginSchema }; out: { json: LoginSchema } }
 >;
 
 export type UpdateContext = Context<
-  Env,
-  "/update/name",
+  AppEnv,
+  any,
   { in: { json: UpdateSchema }; out: { json: UpdateSchema } }
 >;
 
 export type UpdatePasswordContext = Context<
-  Env,
-  "/update/password",
+  AppEnv,
+  any,
   { in: { json: UpdatePasswordSchema }; out: { json: UpdatePasswordSchema } }
 >;
 
 export type VerifyOTPContext = Context<
-  Env,
-  "/otp/verify",
+  AppEnv,
+  any,
   { in: { json: VerifyOtpSchema }; out: { json: VerifyOtpSchema } }
 >;
 
@@ -82,11 +102,6 @@ export type userOptions = {
   password: string;
 };
 
-type tokenizedUser = {
-  user: User;
-  token: string;
-};
-
 type avatarUser = {
   newUrl: string;
 };
@@ -110,6 +125,21 @@ export interface UserService {
 
 /************************* COURSES */
 
+type AddCourseSchema = z.infer<typeof addCourseSchema>;
+type UpdateCourseSchema = z.infer<typeof updateCourseSchema>;
+
+export type CourseContext = Context<
+  AppEnv,
+  any,
+  { in: { json: AddCourseSchema }; out: { json: AddCourseSchema } }
+>;
+
+export type UpdateCourseContext = Context<
+  AppEnv,
+  any,
+  { in: { json: UpdateCourseSchema }; out: { json: UpdateCourseSchema } }
+>;
+
 export type NewCourse = typeof courses.$inferInsert;
 export type Course = typeof courses.$inferSelect;
 
@@ -122,12 +152,16 @@ export interface CourseService {
   addCourse: (course: NewCourse, userId: string) => Promise<Partial<NewUser>>;
   deleteCourse: (courseId: string) => Promise<void>;
   updateCourse: (courseId: string, values: NewCourse) => Promise<void>;
-  findSpecificCourse: (courseId: string) => Promise<Course>;
+  findSpecificCourse: (courseId: string) => Promise<Partial<Course>>;
   getAllCourses: (
     department: string,
     limit: number,
     page: number,
-  ) => Promise<{ page: number; totalPages: number; courses: Course[] }>;
+  ) => Promise<{
+    page: number;
+    totalPages: number;
+    courses: Partial<Course>[];
+  }>;
 }
 
 /** DEPARTMENT */
