@@ -4,6 +4,71 @@ import type { otps } from "./db/schema/otp";
 import type { courses } from "./db/schema/course";
 import { departments } from "./db/schema/department";
 import { emails } from "./db/schema/email";
+import type { Context, Env } from "hono";
+import type z from "zod";
+import type {
+  deleteSchema,
+  loginSchema,
+  signupSchema,
+  updatePasswordSchema,
+  updateSchema,
+  verifyOtpSchema,
+} from "./schema/user.schema";
+
+type SignupSchema = z.infer<typeof signupSchema>;
+type LoginSchema = z.infer<typeof loginSchema>;
+type UpdateSchema = z.infer<typeof updateSchema>;
+type UpdatePasswordSchema = z.infer<typeof updatePasswordSchema>;
+type DeleteSchema = z.infer<typeof deleteSchema>;
+type VerifyOtpSchema = z.infer<typeof verifyOtpSchema>;
+
+export type SignupContext = Context<
+  Env,
+  "/signup",
+  { in: { json: SignupSchema }; out: { json: SignupSchema } }
+>;
+
+export type LoginContext = Context<
+  Env,
+  "/login",
+  { in: { json: LoginSchema }; out: { json: LoginSchema } }
+>;
+
+export type UpdateContext = Context<
+  Env,
+  "/update/name",
+  { in: { json: UpdateSchema }; out: { json: UpdateSchema } }
+>;
+
+export type UpdatePasswordContext = Context<
+  Env,
+  "/update/password",
+  { in: { json: UpdatePasswordSchema }; out: { json: UpdatePasswordSchema } }
+>;
+
+export type DeleteUserContext = Context<
+  Env,
+  "/delete",
+  { in: { json: DeleteSchema }; out: { json: DeleteSchema } }
+>;
+
+export type UploadAvatarContext = Context<
+  Env,
+  "/upload/avatar",
+  { in: { json: DeleteSchema }; out: { json: DeleteSchema } }
+>;
+
+export type CreateOTPContext = Context<
+  Env,
+  "/otp/create",
+  { in: { json: DeleteSchema }; out: { json: DeleteSchema } }
+>;
+
+export type VerifyOTPContext = Context<
+  Env,
+  "/otp/verify",
+  { in: { json: VerifyOtpSchema }; out: { json: VerifyOtpSchema } }
+>;
 
 export type JWTPayload = {
   email: string;
@@ -43,7 +108,6 @@ type tokenizedUser = {
 };
 
 type avatarUser = {
-  user: ResultSetHeader;
   newUrl: string;
 };
 
@@ -60,7 +124,7 @@ export interface UserService {
   updatePassword: (id: string, password: string) => Promise<ResultSetHeader>;
   deleteUser: (id: string) => Promise<ResultSetHeader>;
   uploadAvatar: (id: string, file: File) => Promise<avatarUser>;
-  createOTP: (userId: string) => Promise<number>;
+  sendOTP: (userId: string) => Promise<void>;
   verifyOTP: (userId: string, otp: number) => Promise<boolean>;
 }
 

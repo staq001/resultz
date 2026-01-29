@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, getTableColumns } from "drizzle-orm";
 import { v2 as cloudinary } from "cloudinary";
 import { encodeBase64 } from "hono/utils/encode";
 
@@ -24,9 +24,11 @@ import {
   Conflict,
   InternalServerError,
   NotFound,
+  throwAppError,
   Unauthorized,
 } from "../utils/error";
 import { otps } from "../db/schema/otp";
+import { isAccountLocked, recordFailure, recordSuccess } from "../redis/lockup";
 
 export class UserService implements US {
   async createUser(payload: userOptions) {
@@ -113,7 +115,8 @@ export class UserService implements US {
         .update(users)
         .set({ name })
         .where(eq(users.id, id));
-      if (!result) throw new NotFound("User not found");
+      if (!result || result.affectedRows === 0)
+        throw new NotFound("User not found");
 
       logger.info("User info updated...");
       return result;
@@ -131,7 +134,8 @@ export class UserService implements US {
         .update(users)
         .set({ password: hashPassword(password) })
         .where(eq(users.id, id));
-      if (!result) throw new NotFound(`User doesn't exist`);
+      if (!result || result.affectedRows === 0)
+        throw new NotFound(`User doesn't exist`);
 
       logger.info("User password updated...");
       return result;
@@ -166,12 +170,16 @@ export class UserService implements US {
 
       const { secure_url, publicId } = await this.upload(file, user.publicId);
 
-      const [updatedUser] = await db
+      const [result] = await db
         .update(users)
         .set({ avatar: secure_url, publicId })
         .where(eq(users.id, id));
 
-      return { user: updatedUser, newUrl: secure_url };
+      if (!result || result.affectedRows === 0) {
+        throw new NotFound("User not found!");
+      }
+
+      return { newUrl: secure_url };
     } catch (e) {
       if (e instanceof NotFound) throw e;
       logger.error(`Error uploading user image`);
@@ -196,7 +204,7 @@ export class UserService implements US {
     }
   }
 
-  async createOTP(userId: string) {
+  private async createOTP(userId: string) {
     const token = generateOTP();
     const { hash, salt } = createHash(token.toString());
 
@@ -219,10 +227,24 @@ export class UserService implements US {
     }
   }
 
+  async sendOTP(userId: string) {
+    try {
+      await this.createOTP(userId);
+    } catch (e) {
+      throw e;
+    }
+  }
+
   async verifyOTP(userId: string, otp: number) {
     try {
+      const { otpHash, isUsed, salt, expiresAt } = getTableColumns(otps);
+
+      if (await isAccountLocked(userId)) {
+        throw new throwAppError("Tries Exceeeded. Request a new OTP", 429);
+      }
+
       const [latestOtp] = await db
-        .select()
+        .select({ otpHash, isUsed, salt, expiresAt })
         .from(otps)
         .where(eq(otps.userId, userId))
         .orderBy(desc(otps.createdAt))
@@ -230,18 +252,34 @@ export class UserService implements US {
 
       if (latestOtp) {
         const now = new Date();
-        if (now > latestOtp.expiresAt) return false;
+        if (now > latestOtp.expiresAt) {
+          throw new throwAppError("OTP expired", 422);
+        }
+
+        if (latestOtp.isUsed) {
+          throw new throwAppError("OTP used", 422);
+        }
 
         const hash = latestOtp.otpHash;
         const salt = latestOtp.salt;
 
         const isMatch = verifyHash(otp.toString(), salt, hash);
-        if (isMatch) return true;
+        if (!isMatch) {
+          await recordFailure(userId, 5, "otp");
+          throw new throwAppError("OTP verification failed", 401);
+        }
+        await db
+          .update(otps)
+          .set({ isUsed: true })
+          .where(eq(otps.userId, userId));
+
+        recordSuccess(userId);
+        return true;
       }
       return false;
     } catch (e) {
       logger.error("Error verifying OTP", e);
-      throw new Error("Error verifying OTP");
+      throw e;
     }
   }
 
@@ -253,19 +291,39 @@ export class UserService implements US {
   }
 
   private formatUserObject(user: User): Partial<User> {
-    const { password, ...rest } = user;
+    const {
+      password,
+      isAdmin,
+      publicId,
+      softDeleted,
+      isVerified,
+      createdAt,
+      ...rest
+    } = user;
+
     return rest;
   }
 
   private formatNewUserObject(user: NewUser): Partial<NewUser> {
-    const { password, ...rest } = user;
+    const {
+      password,
+      isAdmin,
+      publicId,
+      softDeleted,
+      isVerified,
+      createdAt,
+      ...rest
+    } = user;
     return rest;
   }
 
   private async insertWithContext(table: Table, values: Values) {
     try {
-      const result = await db.insert(table).values(values);
-      return { result, values };
+      const [result] = await db.insert(table).values(values);
+
+      if (!result || result.affectedRows !== 1)
+        throw new InternalServerError("Insert failed: no rows were inserted");
+      return { values };
     } catch (err) {
       throw err;
     }

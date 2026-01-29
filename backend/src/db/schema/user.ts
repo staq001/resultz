@@ -5,7 +5,7 @@ import {
   int,
   boolean,
 } from "drizzle-orm/mysql-core";
-import { eq, sql } from "drizzle-orm";
+import { eq, getTableColumns, sql } from "drizzle-orm";
 import { db } from "../mysql";
 import { NotFound, Unauthorized } from "../../utils/error";
 import {
@@ -32,25 +32,34 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export async function validateCredentials(email: string, password: string) {
+export async function validateCredentials(
+  inputEmail: string,
+  inputPassword: string,
+) {
   try {
-    const user = await db.select().from(users).where(eq(users.email, email));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, inputEmail));
 
-    if (!user[0] || user[0].softDeleted)
+    if (!user || user.softDeleted)
       throw new NotFound("Wrong email/password combination");
 
-    if (await isAccountLocked(email))
+    if (!user || user.isVerified)
+      throw new NotFound("Please verify your account");
+
+    if (await isAccountLocked(inputEmail))
       throw new Unauthorized("Account locked. Try again in 10 minutes");
 
-    if (user[0] && user[0].password) {
-      const isMatch = await verifyPassword(user[0].password, password);
+    if (user && user.password) {
+      const isMatch = verifyPassword(user.password, inputPassword);
       if (!isMatch) {
-        await recordFailure(email);
+        await recordFailure(inputEmail);
         throw new NotFound("Wrong email/password combination");
       }
-      await recordSuccess(email);
+      await recordSuccess(inputEmail);
     }
-    return user[0];
+    return user;
   } catch (e) {
     throw e;
   }
