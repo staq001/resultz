@@ -7,7 +7,6 @@ import { emails } from "./db/schema/email";
 import type { Context, Env } from "hono";
 import type z from "zod";
 import type {
-  deleteSchema,
   loginSchema,
   signupSchema,
   updatePasswordSchema,
@@ -19,7 +18,6 @@ type SignupSchema = z.infer<typeof signupSchema>;
 type LoginSchema = z.infer<typeof loginSchema>;
 type UpdateSchema = z.infer<typeof updateSchema>;
 type UpdatePasswordSchema = z.infer<typeof updatePasswordSchema>;
-type DeleteSchema = z.infer<typeof deleteSchema>;
 type VerifyOtpSchema = z.infer<typeof verifyOtpSchema>;
 
 export type SignupContext = Context<
@@ -44,24 +42,6 @@ export type UpdatePasswordContext = Context<
   Env,
   "/update/password",
   { in: { json: UpdatePasswordSchema }; out: { json: UpdatePasswordSchema } }
->;
-
-export type DeleteUserContext = Context<
-  Env,
-  "/delete",
-  { in: { json: DeleteSchema }; out: { json: DeleteSchema } }
->;
-
-export type UploadAvatarContext = Context<
-  Env,
-  "/upload/avatar",
-  { in: { json: DeleteSchema }; out: { json: DeleteSchema } }
->;
-
-export type CreateOTPContext = Context<
-  Env,
-  "/otp/create",
-  { in: { json: DeleteSchema }; out: { json: DeleteSchema } }
 >;
 
 export type VerifyOTPContext = Context<

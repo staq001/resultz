@@ -13,20 +13,13 @@ export const loginSchema = z.object({
 });
 
 export const updateSchema = z.object({
-  userId: z.string().min(36, "Invalid ID"),
   name: z.string().min(1, "Full name is required"),
 });
 
 export const updatePasswordSchema = z.object({
-  userId: z.string().min(36, "Invalid ID"),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
-export const deleteSchema = z.object({
-  userId: z.string().min(36, "Invalid ID"),
-});
-
 export const verifyOtpSchema = z.object({
-  userId: z.string().min(36, "Invalid ID"),
   otp: z.number().min(6, "OTP must be 6 characters"),
 });

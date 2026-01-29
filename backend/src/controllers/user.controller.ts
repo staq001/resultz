@@ -2,13 +2,12 @@ import { UserService } from "../services/user.service";
 import { InternalServerError } from "../utils/error";
 
 import type {
-  CreateOTPContext,
-  DeleteUserContext,
+  AppEnv,
+  GetUserContext,
   LoginContext,
   SignupContext,
   UpdateContext,
   UpdatePasswordContext,
-  UploadAvatarContext,
   VerifyOTPContext,
 } from "../types";
 import type { Context } from "hono";
@@ -64,6 +63,25 @@ export class UserController {
     }
   };
 
+  getUser = async (c: GetUserContext) => {
+    try {
+      const user = c.get("user");
+      return c.json(
+        {
+          status: 200,
+          message: "User fetched successfully!",
+          data: { user },
+        },
+        200,
+      );
+    } catch (e: any) {
+      return c.json(
+        { message: e.message || "Internal Server Error" },
+        e.status || 500,
+      );
+    }
+  };
+
   logout = async (c: Context) => {
     try {
       await this.userService.logout(c.req);
@@ -84,10 +102,11 @@ export class UserController {
   };
 
   updateUserName = async (c: UpdateContext) => {
-    const { userId, name } = c.req.valid("json");
+    const { name } = c.req.valid("json");
+    const { id } = c.get("user");
 
     try {
-      await this.userService.updateUserName(userId, name);
+      await this.userService.updateUserName(id, name);
 
       return c.json(
         { status: 200, message: "User name updated sucessfully" },
@@ -102,10 +121,11 @@ export class UserController {
   };
 
   updateUserPassword = async (c: UpdatePasswordContext) => {
-    const { userId, password } = c.req.valid("json");
+    const { password } = c.req.valid("json");
+    const { id } = c.get("user");
 
     try {
-      await this.userService.updateUserName(userId, password);
+      await this.userService.updateUserName(id, password);
 
       return c.json(
         { status: 200, message: "User password updated sucessfully" },
@@ -119,10 +139,10 @@ export class UserController {
     }
   };
 
-  deleteUser = async (c: DeleteUserContext) => {
-    const { userId } = c.req.valid("json");
+  deleteUser = async (c: Context<AppEnv>) => {
+    const { id } = c.get("user");
     try {
-      await this.userService.deleteUser(userId);
+      await this.userService.deleteUser(id);
 
       return c.json({ status: 200, message: "User deleted sucessfully" }, 200);
     } catch (e: any) {
@@ -133,15 +153,13 @@ export class UserController {
     }
   };
 
-  uploadAvatar = async (c: UploadAvatarContext) => {
-    const { userId } = c.req.valid("json");
+  uploadAvatar = async (c: Context<AppEnv>) => {
     const body = await c.req.parseBody();
     const file = body.image;
+
+    const { id } = c.get("user");
     try {
-      const { newUrl } = await this.userService.uploadAvatar(
-        userId,
-        file as File,
-      );
+      const { newUrl } = await this.userService.uploadAvatar(id, file as File);
 
       return c.json({
         status: 200,
@@ -158,11 +176,11 @@ export class UserController {
     }
   };
 
-  createOtp = async (c: CreateOTPContext) => {
-    const { userId } = c.req.valid("json");
+  createOtp = async (c: Context<AppEnv>) => {
+    const { id } = c.get("user");
 
     try {
-      await this.userService.sendOTP(userId);
+      await this.userService.sendOTP(id);
 
       return c.json({
         status: 200,
@@ -177,10 +195,10 @@ export class UserController {
   };
 
   verifyOtp = async (c: VerifyOTPContext) => {
-    const { userId, otp } = c.req.valid("json");
-
+    const { otp } = c.req.valid("json");
+    const { id } = c.get("user");
     try {
-      const result = await this.userService.verifyOTP(userId, otp);
+      const result = await this.userService.verifyOTP(id, otp);
 
       return c.json({
         status: 200,
