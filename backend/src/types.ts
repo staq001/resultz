@@ -17,6 +17,10 @@ import type {
   addCourseSchema,
   updateCourseSchema,
 } from "./schema/courses.schema";
+import type {
+  createDepartmentSchema,
+  updateDepartmentSchema,
+} from "./schema/department.schema";
 
 interface reqUser {
   id: string;
@@ -166,20 +170,47 @@ export interface CourseService {
 
 /** DEPARTMENT */
 
+type CreateDepartmentSchema = z.infer<typeof createDepartmentSchema>;
+type UpdateDepartmentSchema = z.infer<typeof updateDepartmentSchema>;
+
+export type CreateDepartmentContext = Context<
+  Env,
+  any,
+  {
+    in: { json: CreateDepartmentSchema };
+    out: { json: CreateDepartmentSchema };
+  }
+>;
+
+export type UpdateDepartmentContext = Context<
+  Env,
+  any,
+  {
+    in: { json: UpdateDepartmentSchema };
+    out: { json: UpdateDepartmentSchema };
+  }
+>;
+
 export type NewDepartment = typeof departments.$inferInsert;
 export type Department = typeof departments.$inferInsert;
 
 export interface DepartmentService {
   createDepartment: (payload: NewDepartment) => Promise<Values>;
-  updateDepartmentName: (name: string, faculty: string) => Promise<void>;
+  updateDepartmentName: (
+    values: {
+      name: string;
+      faculty: string;
+    },
+    departmentId: string,
+  ) => Promise<void>;
   getDepartmentById: (
     departmentId: string,
     faculty: string,
   ) => Promise<Department>;
   getAllDepartments: (
-    faculty: string,
     page: number,
     limit: number,
+    faculty?: string,
   ) => Promise<{ page: number; totalPages: number; departments: Department[] }>;
   deleteDepartment: (departmentId: string) => Promise<void>;
 }

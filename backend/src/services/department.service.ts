@@ -9,7 +9,7 @@ import type {
 } from "../types";
 import { BadRequest, InternalServerError, NotFound } from "../utils/error";
 
-export class Department implements DS {
+export class DepartmentService implements DS {
   async createDepartment(payload: NewDepartment) {
     try {
       const { name, faculty } = payload;
@@ -31,29 +31,44 @@ export class Department implements DS {
     }
   }
 
-  async updateDepartmentName(name: string, faculty: string) {
+  async updateDepartmentName(
+    values: { name?: string; faculty?: string },
+    departmentId: string,
+  ) {
     try {
-      await db
+      const [result] = await db
         .update(departments)
-        .set({ name })
-        .where(eq(departments.faculty, faculty));
+        .set({ ...values })
+        .where(eq(departments.id, departmentId));
+
+      if (!result || result.affectedRows === 0)
+        throw new NotFound("Department does not exist");
     } catch (e) {
       if (e instanceof NotFound) throw e;
       throw new InternalServerError("Error updating department");
     }
   }
 
-  async getDepartmentById(departmentId: string, faculty: string) {
+  async getDepartmentById(departmentId: string) {
     try {
       const [department] = await db
         .select()
         .from(departments)
-        .where(
-          and(
-            eq(departments.faculty, faculty),
-            eq(departments.id, departmentId),
-          ),
-        );
+        .where(and(eq(departments.id, departmentId)));
+      if (!department) throw new NotFound("Department not found");
+
+      return department;
+    } catch (e) {
+      if (e instanceof NotFound) throw e;
+      throw new InternalServerError("Errr finding department");
+    }
+  }
+  async getDepartmentByFaculty(faculty: string) {
+    try {
+      const [department] = await db
+        .select()
+        .from(departments)
+        .where(and(eq(departments.faculty, faculty)));
       if (!department) throw new NotFound("Department not found");
 
       return department;
@@ -63,33 +78,62 @@ export class Department implements DS {
     }
   }
 
-  async getAllDepartments(faculty: string, page: number, limit: number) {
+  async getAllDepartments(
+    page: number = 1,
+    limit: number = 10,
+    faculty?: string,
+  ) {
     page = page || 1;
     limit = limit || 10;
 
     const skip = (page - 1) * limit;
 
     try {
-      const [total] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(departments)
-        .where(eq(departments.faculty, faculty))
-        .limit(limit)
-        .offset(skip);
+      let allDepartments;
+      let count;
+      let total;
 
-      const count = total?.count;
+      if (faculty) {
+        [total] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(departments)
+          .where(eq(departments.faculty, faculty))
+          .limit(limit)
+          .offset(skip);
 
-      if (!count || count === 0) throw new NotFound("No departments found");
+        count = total?.count;
 
-      const allDepartments = await db
-        .select()
-        .from(departments)
-        .where(eq(departments.faculty, faculty))
-        .limit(limit)
-        .offset(skip);
+        if (!count || count === 0) throw new NotFound("No departments found");
 
-      if (!allDepartments || allDepartments.length === 0)
-        throw new NotFound("No departments found");
+        allDepartments = await db
+          .select()
+          .from(departments)
+          .where(eq(departments.faculty, faculty))
+          .limit(limit)
+          .offset(skip);
+
+        if (!allDepartments || allDepartments.length === 0)
+          throw new NotFound("No departments found");
+      } else {
+        [total] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(departments)
+          .limit(limit)
+          .offset(skip);
+
+        count = total?.count;
+
+        if (!count || count === 0) throw new NotFound("No departments found");
+
+        allDepartments = await db
+          .select()
+          .from(departments)
+          .limit(limit)
+          .offset(skip);
+
+        if (!allDepartments || allDepartments.length === 0)
+          throw new NotFound("No departments found");
+      }
 
       return {
         page,
@@ -112,8 +156,11 @@ export class Department implements DS {
 
   private async insertWithContext(table: Table, values: Values) {
     try {
-      const result = await db.insert(table).values({ ...values });
-      return { result, values };
+      const [result] = await db.insert(table).values({ ...values });
+
+      if (!result || result.affectedRows !== 1)
+        throw new InternalServerError("Insert failed: no rows were inserted");
+      return { values };
     } catch (err) {
       throw err;
     }
