@@ -21,6 +21,7 @@ import type {
   createDepartmentSchema,
   updateDepartmentSchema,
 } from "./schema/department.schema";
+import type { registerCourseSchema } from "./schema/registration.schema";
 
 interface reqUser {
   id: string;
@@ -216,6 +217,7 @@ export interface DepartmentService {
 }
 
 /** EMAILS */
+
 export type NewEmail = typeof emails.$inferInsert;
 export type Email = typeof emails.$inferSelect;
 
@@ -232,6 +234,14 @@ export type EmailPayload = {
 };
 
 /** REGISTRATION */
+type RegisterCourseSchema = z.infer<typeof registerCourseSchema>;
+
+export type RegisterCourseContext = Context<
+  AppEnv,
+  any,
+  { in: { json: RegisterCourseSchema }; out: { json: RegisterCourseSchema } }
+>;
+
 export type RegisterCourse = {
   userId: string;
   courseId: string;

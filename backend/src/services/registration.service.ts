@@ -1,6 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "../db/mysql";
-import crypto from "crypto";
 import { courseRegistrations, courses, users } from "../db/schema";
 import { BadRequest, InternalServerError, NotFound } from "../utils/error";
 import type {
@@ -65,10 +64,13 @@ export class Registration {
     }
   }
 
-  async fetchRegisteredCourse(registeredCourseId: string) {
+  async fetchRegisteredCourse(registeredCourseId: string, userId: string) {
     try {
       const registeredCourse = await db.query.courseRegistrations.findFirst({
-        where: eq(courseRegistrations.id, registeredCourseId),
+        where: and(
+          eq(courseRegistrations.userId, userId),
+          eq(courseRegistrations.id, registeredCourseId),
+        ),
       });
       if (!registeredCourse) throw new NotFound("Registered course not found");
       return registeredCourse;
@@ -79,10 +81,11 @@ export class Registration {
     }
   }
 
-  async findCoursesBySemester(
+  async findRegisteredCoursesBySemester(
+    userId: string,
     payload: FindCoursesBySemester,
-    page: number,
-    limit: number,
+    page: number = 1,
+    limit: number = 10,
   ) {
     const { semester, year } = payload;
 
@@ -98,6 +101,7 @@ export class Registration {
         .where(
           and(
             eq(courseRegistrations.semester, semester),
+            eq(courseRegistrations.userId, userId),
             eq(courseRegistrations.year, year),
           ),
         );
@@ -131,7 +135,7 @@ export class Registration {
     }
   }
 
-  async findCoursesByYear(
+  async findRegisteredCoursesByYear(
     userId: string,
     year: number,
     limit: number,
@@ -146,7 +150,12 @@ export class Registration {
       const total = await db
         .select({ count: sql<number>`count(*)` })
         .from(courseRegistrations)
-        .where(eq(courseRegistrations.year, year));
+        .where(
+          and(
+            eq(courseRegistrations.userId, userId),
+            eq(courseRegistrations.year, year),
+          ),
+        );
 
       const count = total[0]?.count;
       if (!count || count === 0) throw new NotFound("No courses found");
