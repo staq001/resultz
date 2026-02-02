@@ -254,3 +254,5 @@ export type CheckRegisteredCourses = {
   semester: number;
   year: number;
 };
+
+/** SCORES */

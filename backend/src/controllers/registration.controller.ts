@@ -1,7 +1,6 @@
 import type { Context } from "hono";
 import { Registration } from "../services/registration.service";
 import type { AppEnv, RegisterCourseContext } from "../types";
-import { users } from "../db/schema";
 
 export class RegistrationController {
   private registration;
@@ -15,12 +14,16 @@ export class RegistrationController {
     const userId = c.get("user");
 
     try {
-      await this.registration.registerCourse({ userId: userId.id, ...data });
+      const userCourseData = await this.registration.registerCourse({
+        userId: userId.id,
+        ...data,
+      });
 
       return c.json(
         {
           status: 201,
           message: "Course Registered Successfully!",
+          data: userCourseData,
         },
         201,
       );

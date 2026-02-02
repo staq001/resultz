@@ -55,6 +55,8 @@ export class Registration {
           semester,
           year,
         });
+
+        return { user: user.name, course: course.courseCode };
       });
     } catch (e) {
       logger.error(`Unable to register course , ${e}`);
