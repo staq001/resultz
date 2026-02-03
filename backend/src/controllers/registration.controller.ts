@@ -67,7 +67,7 @@ export class RegistrationController {
   };
 
   fetchRegisteredCoursesBySemester = async (c: Context<AppEnv>) => {
-    const { page, limit, semester, year } = c.req.query();
+    const { semester, year } = c.req.query();
     const user = c.get("user");
 
     try {
@@ -75,44 +75,10 @@ export class RegistrationController {
       const yr = Number(year) || new Date().getUTCFullYear();
 
       const registeredCourses =
-        await this.registration.findRegisteredCoursesBySemester(
-          user.id,
-          { semester: sem, year: yr },
-          Number(page),
-          Number(limit),
-        );
-
-      return c.json(
-        {
-          status: 200,
-          message: "Courses fetched successfully!",
-          data: { registeredCourses },
-        },
-        200,
-      );
-    } catch (e: any) {
-      return c.json(
-        {
-          status: e.status || 500,
-          message: e.message || "Internal Server Error",
-        },
-        e.status || 500,
-      );
-    }
-  };
-
-  findRegisteredCoursesByYear = async (c: Context) => {
-    const { page, limit, year } = c.req.query();
-    const user = c.get("user");
-    try {
-      const yr = Number(year) || new Date().getUTCFullYear();
-
-      const registeredCourses =
-        await this.registration.findRegisteredCoursesByYear(
+        await this.registration.findRegisteredCoursesBySemesterOrYear(
           user.id,
           yr,
-          Number(page),
-          Number(limit),
+          sem,
         );
 
       return c.json(

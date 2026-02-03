@@ -1,13 +1,13 @@
 import { and, eq, sql } from "drizzle-orm";
-import { db } from "../db/mysql";
-import { courseRegistrations, courses, users } from "../db/schema";
-import { BadRequest, InternalServerError, NotFound } from "../utils/error";
+import { db } from "@/db/mysql";
+import { courseRegistrations, courses, users } from "@/db/schema";
+import { BadRequest, InternalServerError, NotFound } from "@/utils/error";
 import type {
   CheckRegisteredCourses,
   FindCoursesBySemester,
   RegisterCourse,
 } from "../types";
-import { logger } from "../utils/logger";
+import { logger } from "@/utils/logger";
 
 export class Registration {
   async registerCourse(params: RegisterCourse) {
@@ -83,85 +83,51 @@ export class Registration {
     }
   }
 
-  async findRegisteredCoursesBySemester(
+  async findRegisteredCoursesBySemesterOrYear(
     userId: string,
-    payload: FindCoursesBySemester,
-    page: number = 1,
-    limit: number = 10,
+    year: number,
+    semester?: number,
   ) {
-    const { semester, year } = payload;
-
-    page = page || 1;
-    limit = limit || 10;
-
-    const skip = (page - 1) * limit;
-
     try {
-      const [total] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(courseRegistrations)
-        .where(
-          and(
-            eq(courseRegistrations.semester, semester),
-            eq(courseRegistrations.userId, userId),
-            eq(courseRegistrations.year, year),
-          ),
-        );
+      if (semester)
+        return this.findRegisteredCoursesBySemester(userId, { semester, year });
 
-      const count = total?.count;
-      if (!count || count === 0) throw new NotFound("No courses found");
-
-      const allCourses = await db
-        .select()
-        .from(courseRegistrations)
-        .where(
-          and(
-            eq(courseRegistrations.semester, semester),
-            eq(courseRegistrations.year, year),
-          ),
-        )
-        .limit(limit)
-        .offset(skip);
-
-      if (!allCourses || allCourses.length === 0)
-        throw new NotFound("No courses found");
-
-      return {
-        totalPages: Math.ceil(count / limit),
-        page,
-        courses: allCourses,
-      };
+      return this.findRegisteredCoursesByYear(userId, year);
     } catch (e) {
       if (e instanceof NotFound) throw e;
       throw new InternalServerError("Error fetching all courses");
     }
   }
 
-  async findRegisteredCoursesByYear(
+  private async findRegisteredCoursesBySemester(
     userId: string,
-    year: number,
-    limit: number,
-    page: number,
+    payload: FindCoursesBySemester,
   ) {
-    page = page || 1;
-    limit = limit || 10;
-
-    const skip = (page - 1) * limit;
+    const { semester, year } = payload;
 
     try {
-      const total = await db
-        .select({ count: sql<number>`count(*)` })
+      const allCourses = await db
+        .select()
         .from(courseRegistrations)
         .where(
           and(
+            eq(courseRegistrations.semester, semester),
             eq(courseRegistrations.userId, userId),
             eq(courseRegistrations.year, year),
           ),
         );
 
-      const count = total[0]?.count;
-      if (!count || count === 0) throw new NotFound("No courses found");
+      if (!allCourses || allCourses.length === 0)
+        throw new NotFound("No courses found");
 
+      return allCourses;
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  private async findRegisteredCoursesByYear(userId: string, year: number) {
+    try {
       const allCourses = await db
         .select()
         .from(courseRegistrations)
@@ -170,21 +136,14 @@ export class Registration {
             eq(courseRegistrations.userId, userId),
             eq(courseRegistrations.year, year),
           ),
-        )
-        .limit(limit)
-        .offset(skip);
+        );
 
       if (!allCourses || allCourses.length === 0)
         throw new NotFound("No courses found");
 
-      return {
-        totalPages: Math.ceil(count / limit),
-        page,
-        courses: allCourses,
-      };
+      return allCourses;
     } catch (e) {
-      if (e instanceof NotFound) throw e;
-      throw new InternalServerError("Error fetching all courses");
+      throw e;
     }
   }
 

@@ -1,9 +1,9 @@
-import { and, eq, sql } from "drizzle-orm";
-import { db } from "../db/mysql";
-import { courseRegistrations, scoreCourses } from "../db/schema";
-import { BadRequest, InternalServerError, NotFound } from "../utils/error";
-import { logger } from "../utils/logger";
-import type { FindCoursesBySemester } from "../types";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/db/mysql";
+import { courseRegistrations, scoreCourses } from "@/db/schema";
+import { BadRequest, InternalServerError, NotFound } from "@/utils/error";
+import { logger } from "@/utils/logger";
+import type { FindCoursesBySemester } from "@/types";
 
 export class Scores {
   async scoreCourse(score: number, registeredCourseId: string) {
@@ -21,9 +21,10 @@ export class Scores {
 
         if (existing) throw new BadRequest("This course has been scored!");
 
-        const courseScore = await tx
+        const courseScoreId = await tx
           .insert(scoreCourses)
           .values({
+            userId: registeredCourse.userId,
             score,
             registeredCourseId,
             semester: registeredCourse.semester,
@@ -31,7 +32,7 @@ export class Scores {
           })
           .$returningId();
 
-        return { courseScore, registeredCourse };
+        return { courseScoreId, registeredCourse };
       });
     } catch (e) {
       logger.error(`Unable to score course , ${e}`);
@@ -41,13 +42,13 @@ export class Scores {
     }
   }
 
-  async updateCourseScore(score: number, scoredCourseId: string) {
+  async updateCourseScore(score: number, courseScoreId: string) {
     try {
       return await db.transaction(async (tx) => {
         const [courseScore] = await tx
           .update(scoreCourses)
           .set({ score })
-          .where(eq(scoreCourses.id, scoredCourseId));
+          .where(eq(scoreCourses.id, courseScoreId));
 
         if (!courseScore || courseScore.affectedRows === 0)
           throw new NotFound("Invalid ID. Course score doesnt exist.");
@@ -62,13 +63,13 @@ export class Scores {
   async fetchCourseScore(scoredCourseId: string) {
     try {
       return await db.transaction(async (tx) => {
-        const scoreCourse = await tx.query.scoreCourses.findFirst({
+        const scoredCourse = await tx.query.scoreCourses.findFirst({
           where: eq(scoreCourses.id, scoredCourseId),
         });
 
-        if (!scoreCourse)
+        if (!scoredCourse)
           throw new NotFound("Invalid ID. Course score doesnt exist.");
-        return scoreCourse;
+        return scoredCourse;
       });
     } catch (e) {
       logger.error(`Error fetching score course, ${e}`);
@@ -77,85 +78,65 @@ export class Scores {
     }
   }
 
-  async getAllScoredCoursesBySemsester(
-    payload: FindCoursesBySemester,
-    page: number = 1,
-    limit: number = 10,
+  async getScoresBySemesterOrYear(
+    userId: string,
+    year: number,
+    semester?: number,
   ) {
-    const { semester, year } = payload;
-
-    page = page || 1;
-    limit = limit || 10;
-
-    const skip = (page - 1) * limit;
-
     try {
-      const [total] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(scoreCourses)
-        .where(
-          and(eq(scoreCourses.semester, semester), eq(scoreCourses.year, year)),
-        );
-
-      const count = total?.count;
-      if (!count || count === 0) throw new NotFound("No scores found");
-
-      const allCourses = await db
-        .select()
-        .from(scoreCourses)
-        .where(
-          and(eq(scoreCourses.semester, semester), eq(scoreCourses.year, year)),
-        )
-        .limit(limit)
-        .offset(skip);
-
-      if (!allCourses || allCourses.length === 0)
-        throw new NotFound("No scores found");
-
-      return {
-        totalPages: Math.ceil(count / limit),
-        page,
-        courses: allCourses,
-      };
+      if (semester && year) {
+        return this.getAllScoredCoursesBySemsester({ semester, year }, userId);
+      }
+      return this.getAllScoredCoursesByYear(userId, year);
     } catch (e) {
+      logger.error(`Couldnt fetch scores, ${e}`);
       if (e instanceof NotFound) throw e;
-      throw new InternalServerError("Error fetching scores");
+      throw new InternalServerError("Couldnt fetch scores");
     }
   }
 
-  async getAllScoredCoursesByYear(year: number, limit: number, page: number) {
-    page = page || 1;
-    limit = limit || 10;
-
-    const skip = (page - 1) * limit;
+  private async getAllScoredCoursesBySemsester(
+    payload: FindCoursesBySemester,
+    userId: string,
+  ) {
+    const { semester, year } = payload;
 
     try {
-      const total = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(scoreCourses)
-        .where(and(eq(scoreCourses.year, year)));
-
-      const count = total[0]?.count;
-      if (!count || count === 0) throw new NotFound("No scores found");
-
       const allCourses = await db
         .select()
         .from(scoreCourses)
-        .where(and(eq(scoreCourses.year, year)))
-        .limit(limit)
-        .offset(skip);
+        .where(
+          and(
+            eq(scoreCourses.semester, semester),
+            eq(scoreCourses.year, year),
+            eq(scoreCourses.userId, userId),
+          ),
+        );
 
       if (!allCourses || allCourses.length === 0)
         throw new NotFound("No scores found");
 
-      return {
-        totalPages: Math.ceil(count / limit),
-        page,
-        courses: allCourses,
-      };
+      return allCourses;
     } catch (e) {
-      if (e instanceof NotFound) throw e;
-      throw new InternalServerError("Error fetching scores");
+      throw e;
+    }
+  }
+
+  private async getAllScoredCoursesByYear(userId: string, year: number) {
+    try {
+      const allCourses = await db
+        .select()
+        .from(scoreCourses)
+        .where(
+          and(eq(scoreCourses.userId, userId), eq(scoreCourses.year, year)),
+        );
+
+      if (!allCourses || allCourses.length === 0)
+        throw new NotFound("No scores found");
+
+      return allCourses;
+    } catch (e) {
+      throw e;
     }
   }
 }
