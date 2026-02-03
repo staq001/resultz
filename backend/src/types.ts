@@ -1,9 +1,5 @@
 import type { ResultSetHeader } from "mysql2";
-import type { users } from "./db/schema/user";
-import type { otps } from "./db/schema/otp";
-import type { courses } from "./db/schema/course";
-import { departments } from "./db/schema/department";
-import { emails } from "./db/schema/email";
+import type { users, departments, otps, courses, emails } from "@/db/schema";
 import type { Context, Env } from "hono";
 import type z from "zod";
 import type {
@@ -12,16 +8,17 @@ import type {
   updatePasswordSchema,
   updateSchema,
   verifyOtpSchema,
-} from "./schema/user.schema";
+} from "@/schema/user.schema";
 import type {
   addCourseSchema,
   updateCourseSchema,
-} from "./schema/courses.schema";
+} from "@/schema/courses.schema";
 import type {
   createDepartmentSchema,
   updateDepartmentSchema,
-} from "./schema/department.schema";
-import type { registerCourseSchema } from "./schema/registration.schema";
+} from "@/schema/department.schema";
+import type { registerCourseSchema } from "@/schema/registration.schema";
+import type { scoreCourseSchema } from "@/schema/scoreCourses.schema";
 
 interface reqUser {
   id: string;
@@ -256,3 +253,10 @@ export type CheckRegisteredCourses = {
 };
 
 /** SCORES */
+type ScoreCoursesSchema = z.infer<typeof scoreCourseSchema>;
+
+export type ScoreCourseContext = Context<
+  Env,
+  any,
+  { in: { json: ScoreCoursesSchema }; out: { json: ScoreCoursesSchema } }
+>;

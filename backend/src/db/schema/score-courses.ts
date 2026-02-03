@@ -7,6 +7,7 @@ import {
 } from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
 import { courseRegistrations } from "./user-courses";
+import { users } from ".";
 
 export const scoreCourses = mysqlTable(
   "course_score",
@@ -15,6 +16,9 @@ export const scoreCourses = mysqlTable(
       .primaryKey()
       .notNull()
       .default(sql`(uuid())`),
+    userId: varchar("user_id", { length: 36 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     registeredCourseId: varchar("registered_course_id", { length: 36 })
       .notNull()
       .references(() => courseRegistrations.id, { onDelete: "cascade" }),
