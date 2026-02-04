@@ -20,7 +20,7 @@ import type {
 import type { registerCourseSchema } from "@/schema/registration.schema";
 import type { scoreCourseSchema } from "@/schema/scoreCourses.schema";
 
-interface reqUser {
+export interface reqUser {
   id: string;
   name: string;
   matricNo: number;

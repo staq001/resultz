@@ -37,8 +37,11 @@ export async function validateCredentials(
   inputPassword: string,
 ) {
   try {
+    const { id, name, email, softDeleted, isVerified, password, matricNo } =
+      getTableColumns(users);
+
     const [user] = await db
-      .select()
+      .select({ id, name, email, softDeleted, isVerified, password, matricNo })
       .from(users)
       .where(eq(users.email, inputEmail));
 

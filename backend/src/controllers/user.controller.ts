@@ -176,11 +176,11 @@ export class UserController {
     }
   };
 
-  createOtp = async (c: Context<AppEnv>) => {
-    const { id } = c.get("user");
+  createOtp = async (c: Context) => {
+    const userId = c.req.param("userId");
 
     try {
-      await this.userService.sendOTP(id);
+      await this.userService.sendOTP(userId);
 
       return c.json({
         status: 200,
@@ -196,9 +196,10 @@ export class UserController {
 
   verifyOtp = async (c: VerifyOTPContext) => {
     const { otp } = c.req.valid("json");
-    const { id } = c.get("user");
+    const userId = c.req.param("userId");
+
     try {
-      const result = await this.userService.verifyOTP(id, otp);
+      const result = await this.userService.verifyOTP(userId, otp);
 
       return c.json({
         status: 200,

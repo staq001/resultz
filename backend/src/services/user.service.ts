@@ -11,7 +11,6 @@ import type {
   loginOptions,
   userOptions,
   UserService as US,
-  User,
   Table,
   NewUser,
   Values,
@@ -32,11 +31,10 @@ import { isAccountLocked, recordFailure, recordSuccess } from "../redis/lockup";
 
 export class UserService implements US {
   async createUser(payload: userOptions) {
-    const { name, email, matricNo, password } = payload;
-
     try {
+      const { id, matricNo, email } = getTableColumns(users);
       const findExistingMatricNo = await db
-        .select()
+        .select({ id, matricNo })
         .from(users)
         .where(eq(users.matricNo, matricNo));
 
@@ -44,21 +42,17 @@ export class UserService implements US {
         throw new Conflict("A User with this email already exists");
 
       const findExistingEmail = await db
-        .select()
+        .select({ id, email })
         .from(users)
         .where(eq(users.matricNo, matricNo));
 
       if (findExistingEmail)
         throw new Conflict("A User with this email already exists");
 
-      const insertValues = {
-        name,
-        matricNo,
-        password: hashPassword(password),
-        email,
-      } as NewUser;
-
-      const { values } = await this.insertWithContext(users, insertValues);
+      const { values } = await this.insertWithContext(users, {
+        ...payload,
+        password: hashPassword(payload.password),
+      });
 
       logger.info("User created...");
       return this.formatNewUserObject(values as NewUser);
@@ -83,7 +77,7 @@ export class UserService implements US {
       await setSession(sessionId, String(user.matricNo));
 
       logger.info("User successfully logged in...");
-      return { user: this.formatUserObject(user), token };
+      return { user: this.formatNewUserObject(user), token };
     } catch (e: any) {
       if (e instanceof NotFound) throw e;
       if (e instanceof Unauthorized) throw e;
@@ -283,37 +277,21 @@ export class UserService implements US {
     }
   }
 
-  private async getUserById(id: string) {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+  private async getUserById(userId: string) {
+    const { id, name, matricNo, email, avatar, publicId } =
+      getTableColumns(users);
+
+    const [user] = await db
+      .select({ id, name, matricNo, email, avatar, publicId })
+      .from(users)
+      .where(eq(users.id, userId));
 
     if (!user) throw new NotFound("User not found");
     return user;
   }
 
-  private formatUserObject(user: User): Partial<User> {
-    const {
-      password,
-      isAdmin,
-      publicId,
-      softDeleted,
-      isVerified,
-      createdAt,
-      ...rest
-    } = user;
-
-    return rest;
-  }
-
   private formatNewUserObject(user: NewUser): Partial<NewUser> {
-    const {
-      password,
-      isAdmin,
-      publicId,
-      softDeleted,
-      isVerified,
-      createdAt,
-      ...rest
-    } = user;
+    const { password, softDeleted, isVerified, ...rest } = user;
     return rest;
   }
 
@@ -323,6 +301,7 @@ export class UserService implements US {
 
       if (!result || result.affectedRows !== 1)
         throw new InternalServerError("Insert failed: no rows were inserted");
+
       return { values };
     } catch (err) {
       throw err;
