@@ -10,10 +10,7 @@ const delay: number = 1000 * 60 * 5;
 const email = new Email();
 
 const emailQueue = new Bull("Email", {
-  redis: {
-    host: process.env.REDIS_HOST as string,
-    port: Number(process.env.REDIS_PORT),
-  },
+  redis: Bun.env.REDIS_URL,
 });
 const addMailToQueue = async (data: EmailPayload) => {
   await emailQueue.add(data, {

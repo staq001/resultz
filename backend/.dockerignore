@@ -1,0 +1,8 @@
+node_modules
+.qodo
+.npm
+.git
+
+dist
+out
+*.tgz

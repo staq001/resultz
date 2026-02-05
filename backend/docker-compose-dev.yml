@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+  api-node:
+    image: "api-bun"
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      target: dev
+    init: true
+    ports:
+      - "4400:4400"
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - type: bind
+        source: ./
+        target: /usr/src/app
+      - type: volume
+        target: /usr/src/app/node_modules
+    env_file:
+      - .env
+    environment:
+      - ARGON_MEMORY_COST=${ARGON_MEMORY_COST}
+      - ARGON_TIME_COST=${ARGON_TIME_COST}
+      - ARGON_PARALLELISM=${ARGON_PARALLELISM}
+      - CLOUD_NAME=${CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - NODE_ENV=${NODE_ENV}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_AT=${JWT_EXPIRES_AT}
+      - PORT=${PORT}
+      - REDIS_URL=${REDIS_URL}
+      - DATABASE_URL=${DATABASE_URL}
+      - BREVO_API_KEY=${BREVO_API_KEY}
+
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.0.33
+    ports:
+      - "33036:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+    volumes:
+      - mysql-data:/var/lib/mysql
+  redis:
+    image: redis:8.4.0
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    command:
+      - sh
+      - -c
+      - |
+        redis-server --requirepass "$REDIS_PASSWORD"
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+volumes:
+  redis-data:
+  mysql-data:
