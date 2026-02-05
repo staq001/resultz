@@ -38,6 +38,10 @@ export function createHash(data: string) {
   return { hash, salt };
 }
 
+export function createActivationToken() {
+  return crypto.randomBytes(32).toString("hex");
+}
+
 export function verifyHash(data: string, salt: string, originalHash: string) {
   const hash = crypto
     .pbkdf2Sync(data, salt, 100000, 64, "sha256")

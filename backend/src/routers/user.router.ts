@@ -44,4 +44,6 @@ app.post("/users/avatar", authentication, userController.uploadAvatar);
 
 app.post("/users/delete", authentication, userController.deleteUser);
 
+app.get("/activate", userController.verifyActivationToken);
+
 export default app;

@@ -1,5 +1,5 @@
 import { UserService } from "../services/user.service";
-import { InternalServerError } from "../utils/error";
+import { BadRequest, InternalServerError } from "../utils/error";
 
 import type {
   AppEnv,
@@ -11,12 +11,15 @@ import type {
   VerifyOTPContext,
 } from "../types";
 import type { Context } from "hono";
+import { TokenActivation } from "@/services/tokenActivation.service";
 
 export class UserController {
   private userService: UserService;
+  private tokenActivate;
 
   constructor() {
     this.userService = new UserService();
+    this.tokenActivate = new TokenActivation();
   }
 
   signup = async (c: SignupContext) => {
@@ -208,6 +211,29 @@ export class UserController {
           result,
         },
       });
+    } catch (e: any) {
+      return c.json(
+        { message: e.message || "Internal Server Error" },
+        e.status || 500,
+      );
+    }
+  };
+
+  verifyActivationToken = async (c: Context) => {
+    try {
+      const token = c.req.query("token");
+      const userId = c.req.query("rUsId");
+
+      if (!token) throw new BadRequest("Invalid activation link");
+
+      const result = await this.tokenActivate.verifyToken(
+        token,
+        userId as string,
+      );
+
+      if (!result) throw new BadRequest("Invalid or expired token.");
+
+      return c.redirect(`${Bun.env.APP_URL}/login`);
     } catch (e: any) {
       return c.json(
         { message: e.message || "Internal Server Error" },
