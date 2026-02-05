@@ -83,7 +83,7 @@ export class ScoreController {
     }
   };
 
-  getAllScoredCoursesBySemsester = async (c: Context<AppEnv>) => {
+  getAllScoredCoursesBySemsesterorYear = async (c: Context<AppEnv>) => {
     const user = c.get("user");
     const { semester, year } = c.req.query();
     try {

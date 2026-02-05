@@ -13,7 +13,7 @@ export const courses = mysqlTable("courses", {
   title: varchar("title", { length: 255 }).notNull(),
   departmentId: varchar("department_id", { length: 255 })
     .notNull()
-    .references(() => departments.id),
+    .references(() => departments.id, { onDelete: "cascade" }),
   createdBy: varchar("created_by", { length: 255 })
     .notNull()
     .references(() => users.id),
