@@ -14,9 +14,27 @@ const app = new Hono();
 
 const userController = new UserController();
 
-app.post("/users/signup", zodValidator(signupSchema), userController.signup);
+import { createRateLimiterMiddleware } from "@/middleware/rateLimiter";
 
-app.post("/users/login", zodValidator(loginSchema), userController.login);
+app.post(
+  "/users/signup",
+  createRateLimiterMiddleware("user-signup", {
+    windowSeconds: 60,
+    maxRequests: 5,
+  }),
+  zodValidator(signupSchema),
+  userController.signup,
+);
+
+app.post(
+  "/users/login",
+  createRateLimiterMiddleware("user-login", {
+    windowSeconds: 60,
+    maxRequests: 5,
+  }),
+  zodValidator(loginSchema),
+  userController.login,
+);
 
 app.post("/users/logout", authentication, userController.logout);
 

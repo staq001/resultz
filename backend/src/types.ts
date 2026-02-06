@@ -20,6 +20,20 @@ import type {
 import type { registerCourseSchema } from "@/schema/registration.schema";
 import type { scoreCourseSchema } from "@/schema/scoreCourses.schema";
 
+export interface RateLimiterConfig {
+  identifier: string;
+  maxRequests: number;
+  windowSeconds: number;
+}
+
+export interface RateLimiterResult {
+  allowed: boolean;
+  current: number;
+  limit: number;
+  resetIn: number;
+  remaining: number;
+}
+
 export interface reqUser {
   id: string;
   name: string;

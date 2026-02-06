@@ -9,7 +9,7 @@ export class TokenActivation {
   async createActivationUri(userId: string) {
     const token = await this.createToken(userId);
 
-    return `${Bun.env.APP_URL}/activate/?token=${token}&rUsId=${userId}`;
+    return `${Bun.env.APP_URL}/api/v1/activate/?token=${token}&rUsId=${userId}`;
   }
 
   async verifyToken(incomingToken: string, rUserId: string) {
