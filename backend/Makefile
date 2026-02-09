@@ -28,4 +28,4 @@ compose-down-nocache:
 ### tests
 .PHONY: run-tests
 run-tests:
-	docker compose -f ${DEV_COMPOSE_FILE} -f ${TEST_COMPOSE_FILE} run --build api-node
+	docker compose -f ${DEV_COMPOSE_FILE} -f ${TEST_COMPOSE_FILE} run --build api-bun

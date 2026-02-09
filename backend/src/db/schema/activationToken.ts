@@ -8,7 +8,7 @@ import { users } from "./user";
 
 export const activationTokens = mysqlTable("activation_tokens", {
   token: varchar("token", { length: 100 }).notNull(),
-  userId: varchar("user_id")
+  userId: varchar("user_id", { length: 36 })
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   expiresAt: timestamp("expires_at").notNull(),

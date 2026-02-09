@@ -53,7 +53,7 @@ app.get("/", (c) =>
 );
 
 errorHandler(app);
-app.all("*", (c) => invalidRoute(c));
+app.all("*", invalidRoute);
 
 const server = Bun.serve({
   fetch: app.fetch,
