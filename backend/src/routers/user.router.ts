@@ -64,4 +64,6 @@ app.post("/users/delete", authentication, userController.deleteUser);
 
 app.get("/activate", userController.verifyActivationToken);
 
+app.post("/users/activation/resend", userController.resendActivation);
+
 export default app;

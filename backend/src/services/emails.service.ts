@@ -62,15 +62,12 @@ export class EmailService {
         payload.variables?.unsubscribeUrl || "https://example.com/unsubscribe",
     };
 
-    const variables = {
-      userName: payload.variables?.userName || "User",
-      title: payload.variables?.title,
-    };
+    const variables = { ...data, ...(payload.variables || {}) };
 
     const emailContent = {
       from: process.env.SMTP_USER as string,
       toEmail: payload.recipient,
-      subject: data.title,
+      subject: data.title || payload.templateId,
       html: renderTemplate(payload.templateId, variables),
     };
 

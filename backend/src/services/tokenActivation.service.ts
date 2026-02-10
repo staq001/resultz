@@ -50,7 +50,7 @@ export class TokenActivation {
     const token = createActivationToken();
 
     const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24);
-    await this.insertWithContext(token, userId, expiresAt);
+    await this.insertWithContext(userId, token, expiresAt);
     return token;
   }
 

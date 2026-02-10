@@ -12,14 +12,18 @@ import type {
 } from "../types";
 import type { Context } from "hono";
 import { TokenActivation } from "@/services/tokenActivation.service";
+import { EmailService } from "@/services/emails.service";
+import { logger } from "@/utils/logger";
 
 export class UserController {
   private userService: UserService;
   private tokenActivate;
+  private emailService: EmailService;
 
   constructor() {
     this.userService = new UserService();
     this.tokenActivate = new TokenActivation();
+    this.emailService = new EmailService();
   }
 
   signup = async (c: SignupContext) => {
@@ -27,6 +31,23 @@ export class UserController {
 
     try {
       const user = await this.userService.createUser(data);
+
+      try {
+        const activationUri = await this.tokenActivate.createActivationUri(
+          user.id as string,
+        );
+        await this.emailService.queueEmail({
+          templateId: "account-activation-request",
+          recipient: (user as any).email,
+          variables: {
+            userName: (user as any).name,
+            title: "Activate your account",
+            activationLinkUrl: activationUri,
+          },
+        });
+      } catch (e) {
+        logger.error(`Failed to send activation email: ${e}`);
+      }
 
       return c.json(
         {
@@ -39,6 +60,44 @@ export class UserController {
     } catch (e: any) {
       return c.json(
         { message: e.message || InternalServerError },
+        e.status || 500,
+      );
+    }
+  };
+
+  resendActivation = async (c: Context) => {
+    try {
+      const body = await c.req.json();
+      const email = body?.email;
+      if (!email) throw new BadRequest("Email is required");
+
+      const user = await this.userService.getUserByEmail(email as string);
+
+      if (user.isVerified) {
+        return c.json(
+          { status: 400, message: "Account already verified" },
+          400,
+        );
+      }
+
+      const activationUri = await this.tokenActivate.createActivationUri(
+        user.id,
+      );
+
+      await this.emailService.queueEmail({
+        templateId: "account-activation-request",
+        recipient: user.email,
+        variables: {
+          userName: user.name,
+          title: "Activate your account",
+          activationLinkUrl: activationUri,
+        },
+      });
+
+      return c.json({ status: 200, message: "Activation link resent" }, 200);
+    } catch (e: any) {
+      return c.json(
+        { message: e.message || "Internal Server Error" },
         e.status || 500,
       );
     }

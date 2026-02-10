@@ -290,6 +290,25 @@ export class UserService implements US {
     return user;
   }
 
+  async getUserByEmail(emailAddress: string) {
+    try {
+      const { id, name, matricNo, email, avatar, publicId, isVerified } =
+        getTableColumns(users);
+
+      const [user] = await db
+        .select({ id, name, matricNo, email, avatar, publicId, isVerified })
+        .from(users)
+        .where(eq(users.email, emailAddress));
+
+      if (!user) throw new NotFound("User not found");
+      return user;
+    } catch (e) {
+      if (e instanceof NotFound) throw e;
+      logger.error(`Error fetching user by email: ${e}`);
+      throw new InternalServerError("Error fetching user");
+    }
+  }
+
   private formatNewUserObject(user: NewUser): Partial<NewUser> {
     const { password, softDeleted, isVerified, ...rest } = user;
     return rest;
