@@ -28,6 +28,10 @@ COPY --from=install /temp/prod/node_modules node_modules
 COPY --from=prerelease /usr/src/app/src/index.ts .
 COPY --from=prerelease /usr/src/app/package.json .
 
+# install curl for health checks
+USER root
+RUN apt-get update && apt-get install -y curl
+
 # run the app
 USER bun
 EXPOSE 4400

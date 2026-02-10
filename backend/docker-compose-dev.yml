@@ -37,7 +37,12 @@ services:
       - REDIS_URL=${REDIS_URL}
       - DATABASE_URL=${DATABASE_URL}
       - BREVO_API_KEY=${BREVO_API_KEY}
-
+    healthcheck:
+      test: ["CMD", "curl", "-f", "${API_URL}/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     restart: unless-stopped
 
   db:

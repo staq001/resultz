@@ -6,7 +6,9 @@ import { HTTPException } from "hono/http-exception";
 
 export function errorHandler(app: Hono) {
   return app.onError((err, c) => {
-    logger.error(`${err.message}`);
+    logger.error(
+      `[${c.req.method}] ${c.req.url} - ${err.stack || err.message}`,
+    );
 
     if (err instanceof BadRequest) return c.json({ message: err.message }, 400);
     if (err instanceof HTTPException)
@@ -27,15 +29,12 @@ export function errorHandler(app: Hono) {
 }
 
 export function invalidRoute(c: Context) {
-  const { url, method, header } = c.req;
-
-  const protocol = header("X-Forwarded-Proto") || "http";
-  const host = c.get("host");
-
+  const method = c.req.method;
+  const url = c.req.url;
   return c.json(
     {
       status: 404,
-      message: `Sorry, this route ${method}/ ${protocol}://${host}${url} doesn't exist`,
+      message: `Sorry, this route [${method}] ${url} doesn't exist`,
     },
     404,
   );

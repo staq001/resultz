@@ -12,9 +12,11 @@ import departmentsRouter from "@/routers/departments.router";
 import { errorHandler, invalidRoute } from "@/middleware/errorHandler";
 import { bodyLimit } from "hono/body-limit";
 import { limiter } from "@/middleware/hono-rate-limiter";
+import router from "./routers/healthcheck";
 
 const app = new Hono();
 
+app.route("/health", router);
 app.use(
   "*",
   cors({
@@ -42,23 +44,25 @@ app.use(
   }),
 );
 
-app.route("api/v1", usersRouter);
-app.route("api/v1", coursesRouter);
-app.route("api/v1", scoresRouter);
-app.route("api/v1", registrationsRouter);
-app.route("api/v1", departmentsRouter);
+app.route("/api/v1", usersRouter);
+app.route("/api/v1", coursesRouter);
+app.route("/api/v1", scoresRouter);
+app.route("/api/v1", registrationsRouter);
+app.route("/api/v1", departmentsRouter);
 
 app.get("/", (c) =>
   c.json({ message: "Welcome to the Results Processing API" }, 200),
 );
 
-errorHandler(app);
 app.all("*", invalidRoute);
+errorHandler(app);
 
 const server = Bun.serve({
   fetch: app.fetch,
   port: Number(Bun.env.PORT) || 3000,
 });
+
+log.info(`Server started on http://localhost:${server.port}`);
 
 process.on("SIGTERM", () => {
   log.info("SIGTERM received, shutting down gracefully...");
