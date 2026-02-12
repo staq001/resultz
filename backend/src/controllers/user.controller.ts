@@ -5,6 +5,7 @@ import type {
   AppEnv,
   GetUserContext,
   LoginContext,
+  safeUser,
   SignupContext,
   UpdateContext,
   UpdatePasswordContext,
@@ -59,7 +60,7 @@ export class UserController {
       );
     } catch (e: any) {
       return c.json(
-        { message: e.message || InternalServerError },
+        { message: e.message || "Internal Server Error" },
         e.status || 500,
       );
     }
@@ -132,7 +133,7 @@ export class UserController {
         {
           status: 200,
           message: "User fetched successfully!",
-          data: { user },
+          data: { user: user as safeUser },
         },
         200,
       );
@@ -225,7 +226,7 @@ export class UserController {
 
       return c.json({
         status: 200,
-        message: "Avatar uplaoded successfully!",
+        message: "Avatar uploaded successfully!",
         data: {
           avatarUrl: newUrl,
         },

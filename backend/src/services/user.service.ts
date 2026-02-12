@@ -5,7 +5,8 @@ import { encodeBase64 } from "hono/utils/encode";
 
 import { createHash, verifyHash } from "../utils/index";
 import { db } from "../db/mysql";
-import { users, validateCredentials } from "../db/schema/user";
+import { users } from "../db/schema/user";
+import { validateCredentials } from "@/db/validateCredentials";
 import { logger } from "../utils/logger";
 import type {
   loginOptions,
@@ -20,6 +21,7 @@ import { hashPassword } from "../utils/argon";
 import { generateAuthToken, generateOTP, verifyToken } from "../utils";
 import { deleteSession, setSession } from "../redis/session";
 import {
+  BadRequest,
   Conflict,
   InternalServerError,
   NotFound,
@@ -33,32 +35,32 @@ export class UserService implements US {
   async createUser(payload: userOptions) {
     try {
       const { id, matricNo, email } = getTableColumns(users);
-      const findExistingMatricNo = await db
+      const [findExistingMatricNo] = await db
         .select({ id, matricNo })
         .from(users)
-        .where(eq(users.matricNo, matricNo));
+        .where(eq(users.matricNo, payload.matricNo));
 
-      if (findExistingMatricNo)
-        throw new Conflict("A User with this email already exists");
+      if (findExistingMatricNo?.matricNo === payload.matricNo)
+        throw new Conflict("A User with this matric no already exists");
 
-      const findExistingEmail = await db
+      const [findExistingEmail] = await db
         .select({ id, email })
         .from(users)
-        .where(eq(users.matricNo, matricNo));
+        .where(eq(users.email, payload.email));
 
-      if (findExistingEmail)
+      if (findExistingEmail?.email === payload.email)
         throw new Conflict("A User with this email already exists");
 
       const { values } = await this.insertWithContext(users, {
         ...payload,
-        password: hashPassword(payload.password),
+        password: await hashPassword(payload.password),
       });
 
       logger.info("User created...");
       return this.formatNewUserObject(values as NewUser);
     } catch (e: any) {
+      logger.error(`Error creating user, ${e}`);
       if (e instanceof Conflict) throw e;
-      logger.error("Error creating user");
       throw new InternalServerError(`Error creating user`);
     }
   }
@@ -74,21 +76,20 @@ export class UserService implements US {
         matricNo: user.matricNo,
         sessionId,
       });
-      await setSession(sessionId, String(user.matricNo));
+      await setSession(sessionId, user.matricNo);
 
       logger.info("User successfully logged in...");
       return { user: this.formatNewUserObject(user), token };
     } catch (e: any) {
       if (e instanceof NotFound) throw e;
       if (e instanceof Unauthorized) throw e;
-      logger.error("Error logging user in...", e);
       throw new InternalServerError(`Error logging user in.`);
     }
   }
 
   async logout(req: any) {
     try {
-      const auth = req.headers.authorization;
+      const auth = req.header("Authorization");
       if (!auth) throw new Unauthorized("Unauthorized");
 
       const token = auth.replace("Bearer ", "");
@@ -98,7 +99,7 @@ export class UserService implements US {
 
       logger.info("User successfully logged out...");
     } catch (e: any) {
-      logger.error("Error logging user out...");
+      logger.error(`Error logging user out..., ${e}`);
       throw new InternalServerError(`Error logging user out`);
     }
   }
@@ -115,9 +116,8 @@ export class UserService implements US {
       logger.info("User info updated...");
       return result;
     } catch (e) {
-      if (e instanceof NotFound) throw e;
-
       logger.error(`Error updating fields...`);
+      if (e instanceof NotFound) throw e;
       throw new InternalServerError(`Error updating fields`);
     }
   }
@@ -126,7 +126,7 @@ export class UserService implements US {
     try {
       const [result] = await db
         .update(users)
-        .set({ password: hashPassword(password) })
+        .set({ password: await hashPassword(password) })
         .where(eq(users.id, id));
       if (!result || result.affectedRows === 0)
         throw new NotFound(`User doesn't exist`);
@@ -134,9 +134,8 @@ export class UserService implements US {
       logger.info("User password updated...");
       return result;
     } catch (e) {
-      if (e instanceof NotFound) throw e;
-
       logger.error(`Error updating password...`);
+      if (e instanceof NotFound) throw e;
       throw new InternalServerError(`Error updating password`);
     }
   }
@@ -152,14 +151,16 @@ export class UserService implements US {
       logger.info("User successfully deleted");
       return result;
     } catch (e) {
-      if (e instanceof NotFound) throw e;
       logger.error(`Error deleting user...`);
+      if (e instanceof NotFound) throw e;
       throw new InternalServerError(`Error deleting user`);
     }
   }
 
   async uploadAvatar(id: string, file: File) {
     try {
+      if (!file) throw new BadRequest("No file uploaded");
+
       const user = await this.getUserById(id);
 
       const { secure_url, publicId } = await this.upload(file, user.publicId);
@@ -175,8 +176,9 @@ export class UserService implements US {
 
       return { newUrl: secure_url };
     } catch (e) {
+      logger.error(`Error uploading user image, ${e}`);
       if (e instanceof NotFound) throw e;
-      logger.error(`Error uploading user image`);
+      if (e instanceof BadRequest) throw e;
       throw new InternalServerError(`Error uploading user image`);
     }
   }
@@ -303,8 +305,8 @@ export class UserService implements US {
       if (!user) throw new NotFound("User not found");
       return user;
     } catch (e) {
-      if (e instanceof NotFound) throw e;
       logger.error(`Error fetching user by email: ${e}`);
+      if (e instanceof NotFound) throw e;
       throw new InternalServerError("Error fetching user");
     }
   }
@@ -323,6 +325,7 @@ export class UserService implements US {
 
       return { values };
     } catch (err) {
+      logger.error("Error inserting with context", err);
       throw err;
     }
   }

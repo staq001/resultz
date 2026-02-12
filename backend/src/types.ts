@@ -37,7 +37,16 @@ export interface RateLimiterResult {
 export interface reqUser {
   id: string;
   name: string;
-  matricNo: number;
+  matricNo: string;
+  email: string;
+  avatar: string | null;
+  isAdmin: boolean;
+}
+
+export interface safeUser {
+  id: string;
+  name: string;
+  matricNo: string;
   email: string;
   avatar: string | null;
 }
@@ -88,7 +97,7 @@ export type VerifyOTPContext = Context<
 
 export type JWTPayload = {
   email: string;
-  matricNo: number;
+  matricNo: string;
   sessionId: string;
 };
 
@@ -114,7 +123,7 @@ export type loginOptions = {
 export type userOptions = {
   name: string;
   email: string;
-  matricNo: number;
+  matricNo: string;
   password: string;
 };
 

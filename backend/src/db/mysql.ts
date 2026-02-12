@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import * as schema from "./schema";
 import { logger } from "@/utils/logger";
 
-const connection = mysql.createPool(Bun.env.DATABASE_URL!);
+const connection = mysql.createPool(process.env.DATABASE_URL!);
 
 export const db = drizzle(connection, { schema, mode: "default" });
 
