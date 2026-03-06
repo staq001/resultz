@@ -10,11 +10,6 @@ import { verifyToken } from "@/utils";
 import { verifySession } from "@/redis/session";
 
 export class Auth {
-  private owner;
-  constructor(owner: string = "admin") {
-    this.owner = owner;
-  }
-
   authentication = createMiddleware<AppEnv>(async (c: Context, next: Next) => {
     try {
       const authHeader = c.req.header("Authorization");
@@ -24,20 +19,12 @@ export class Auth {
       }
 
       const token = authHeader.replace("Bearer ", "");
-
       if (!token) {
         return c.json({ error: "Please authenticate" }, 401);
       }
 
       const user = await this.tokenValidator(token);
-      if ((this.owner = "admin")) {
-        if (user.isAdmin !== true) {
-          return c.json({ error: "Forbidden" }, 403);
-        }
-        c.set("user", user as reqUser);
-      } else {
-        c.set("user", user as reqUser);
-      }
+      c.set("user", user);
 
       await next();
     } catch (e: any) {
@@ -48,11 +35,28 @@ export class Auth {
     }
   });
 
+  adminProtectedRoute = createMiddleware<AppEnv>(
+    async (c: Context, next: Next) => {
+      try {
+        const user = c.get("user") as reqUser;
+
+        if (!user || !user.isAdmin) {
+          return c.json({ error: "Unauthorized" }, 403);
+        }
+
+        await next();
+      } catch (e: any) {
+        return c.json({ error: e.message || "Forbidden" }, e.status || 403);
+      }
+    },
+  );
+
   private async tokenValidator(token: string) {
     const { email, sessionId, matricNo } = await verifyToken(token);
 
     try {
-      if (await verifySession(sessionId)) {
+      const sessionValid = await verifySession(sessionId);
+      if (sessionValid) {
         return this.getUser(email, matricNo);
       } else throw new Unauthorized("Please authenticate!");
     } catch (e) {
@@ -60,23 +64,29 @@ export class Auth {
     }
   }
 
-  private async getUser(userEmail: string, userMatricNo: number) {
+  private async getUser(userEmail: string, userMatricNo: string) {
     try {
-      const { id, name, email, matricNo, avatar, isAdmin } =
+      const { id, name, email, matricNo, avatar, isAdmin, softDeleted } =
         getTableColumns(users);
 
       const [user] = await db
-        .select({ id, name, email, matricNo, avatar, isAdmin })
+        .select({ id, name, email, matricNo, avatar, isAdmin, softDeleted })
         .from(users)
         .where(
           and(eq(users.email, userEmail), eq(users.matricNo, userMatricNo)),
         );
 
       if (!user) throw new Unauthorized("Please authenticate!");
+      if (user.softDeleted) throw new Unauthorized("Please authenticate!");
 
-      return user;
+      return this.formatUserObject(user);
     } catch (e) {
       throw e;
     }
+  }
+
+  private formatUserObject(user: any) {
+    const { softDeleted, ...rest } = user;
+    return rest;
   }
 }

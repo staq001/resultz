@@ -13,6 +13,10 @@ compose-up:
 compose-up-build:
 	docker compose -f $(DEV_COMPOSE_FILE) up --build
 
+.PHONY: compose-exec
+compose-exec:
+	docker compose -f $(DEV_COMPOSE_FILE) exec api-bun sh
+
 .PHONY: compose-down
 compose-down:
 	docker compose -f $(DEV_COMPOSE_FILE) down

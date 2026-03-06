@@ -9,7 +9,7 @@ import {
 import { zodValidator } from "@/middleware/errorHandler";
 import { Auth } from "@/middleware/auth";
 
-const { authentication } = new Auth("user");
+const { authentication } = new Auth();
 const app = new Hono();
 
 const userController = new UserController();
@@ -20,7 +20,7 @@ app.post(
   "/users/signup",
   createRateLimiterMiddleware("user-signup", {
     windowSeconds: 60,
-    maxRequests: 5,
+    maxRequests: 7,
   }),
   zodValidator(signupSchema),
   userController.signup,
@@ -30,7 +30,7 @@ app.post(
   "/users/login",
   createRateLimiterMiddleware("user-login", {
     windowSeconds: 60,
-    maxRequests: 5,
+    maxRequests: 7,
   }),
   zodValidator(loginSchema),
   userController.login,
@@ -53,8 +53,8 @@ app.patch(
 
 app.patch(
   "/users/update/password",
-  zodValidator(updatePasswordSchema),
   authentication,
+  zodValidator(updatePasswordSchema),
   userController.updateUserPassword,
 );
 

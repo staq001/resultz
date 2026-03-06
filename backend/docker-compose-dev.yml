@@ -37,6 +37,7 @@ services:
       - REDIS_URL=${REDIS_URL}
       - DATABASE_URL=${DATABASE_URL}
       - BREVO_API_KEY=${BREVO_API_KEY}
+      - BREVO_SENDER_EMAIL=${BREVO_SENDER_EMAIL}
     healthcheck:
       test: ["CMD", "curl", "-f", "${API_URL}/health"]
       interval: 30s

@@ -13,6 +13,7 @@ import { errorHandler, invalidRoute } from "@/middleware/errorHandler";
 import { bodyLimit } from "hono/body-limit";
 import { limiter } from "@/middleware/hono-rate-limiter";
 import router from "./routers/healthcheck";
+import { connectRedis } from "@/redis/client";
 
 const app = new Hono();
 
@@ -62,6 +63,7 @@ const server = Bun.serve({
   port: Number(Bun.env.PORT) || 3000,
 });
 
+connectRedis();
 log.info(`Server started on http://localhost:${server.port}`);
 
 process.on("SIGTERM", () => {
