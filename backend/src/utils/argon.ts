@@ -7,13 +7,13 @@ const argonConfig = {
   parallelism: Number(process.env.ARGON_PARALLELISM),
 };
 
-export function hashPassword(password: string):string {
-  return argon2.hash(password, argonConfig);
+export async function hashPassword(password: string): Promise<string> {
+  return await argon2.hash(password, argonConfig);
 }
 
-export default function verifyPassword(
+export default async function verifyPassword(
   hashedPassword: string,
-  password: string
-):boolean {
-  return argon2.verify(hashedPassword, password);
+  password: string,
+): Promise<boolean> {
+  return await argon2.verify(hashedPassword, password);
 }

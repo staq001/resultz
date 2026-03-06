@@ -6,10 +6,14 @@
   "scripts": {
     "test": "bun test",
     "start": "bun src/index.ts",
-    "dev": "bun src/index.ts"
+    "dev": "bun --watch src/index.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "dotenv": "17.3.1"
   },
   "peerDependencies": {
     "typescript": "^5"

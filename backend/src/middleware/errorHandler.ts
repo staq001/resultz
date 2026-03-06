@@ -40,13 +40,25 @@ export function invalidRoute(c: Context) {
   );
 }
 
+function extractZodErrorMessage(errorMsg: string): string | null {
+  try {
+    const parsed = JSON.parse(errorMsg);
+    if (Array.isArray(parsed) && parsed[0] && parsed[0].message) {
+      return parsed[0].message;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
 export function zodValidator(schema: any) {
   return zValidator("json", schema, (result, c) => {
     if (!result.success) {
       return c.json(
         {
           message: "Validation Failed",
-          errors: result.error.message,
+          errors: extractZodErrorMessage(result.error.message),
         },
         400,
       );
