@@ -264,7 +264,7 @@ export type RegisterCourseContext = Context<
 
 export type RegisterCourse = {
   userId: string;
-  courseId: string;
+  courseCode: string;
   semester: number;
   year: number;
 };

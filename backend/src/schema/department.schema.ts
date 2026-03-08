@@ -6,6 +6,6 @@ export const createDepartmentSchema = z.object({
 });
 
 export const updateDepartmentSchema = z.object({
-  name: z.string().min(1, "Department name is required").optional(),
+  name: z.string().min(1, "Department name is required"),
   faculty: z.string().min(1, "Faculty is required").optional(),
 });

@@ -16,7 +16,7 @@ const {
 } = new CourseController();
 
 app.post(
-  "/courses/create",
+  "/courses/create/:departmentId",
   zodValidator(addCourseSchema),
   authentication,
   addCourse,

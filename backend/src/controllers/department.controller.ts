@@ -22,7 +22,7 @@ export class DepartmentController {
         faculty,
       });
 
-      c.json(
+      return c.json(
         {
           status: 201,
           message: "Department created successfully",
@@ -42,7 +42,10 @@ export class DepartmentController {
     try {
       await this.departmentService.updateDepartmentName(values, departmentId);
 
-      c.json({ status: 200, message: "Department updated successfully!" }, 200);
+      return c.json(
+        { status: 200, message: "Department updated successfully!" },
+        200,
+      );
     } catch (e: any) {
       return c.json({ message: e.message }, e.status || 500);
     }
@@ -55,10 +58,10 @@ export class DepartmentController {
       const department =
         await this.departmentService.getDepartmentById(departmentId);
 
-      c.json(
+      return c.json(
         {
           status: 200,
-          message: "Department updated successfully!",
+          message: "Department fetched successfully!",
           data: { department },
         },
         200,
@@ -78,7 +81,7 @@ export class DepartmentController {
         faculty as string,
       );
 
-      c.json(
+      return c.json(
         {
           status: 200,
           message: "Department fetched successfully!",
@@ -101,7 +104,7 @@ export class DepartmentController {
         faculty,
       );
 
-      c.json(
+      return c.json(
         {
           status: 200,
           message: "Departments fetched successfully!",
@@ -118,13 +121,11 @@ export class DepartmentController {
     const departmentId = c.req.param("departmentId");
 
     try {
-      const department =
-        await this.departmentService.deleteDepartment(departmentId);
-      c.json(
+      await this.departmentService.deleteDepartment(departmentId);
+      return c.json(
         {
           status: 200,
           message: "Department deleted successfully!",
-          data: { department },
         },
         200,
       );

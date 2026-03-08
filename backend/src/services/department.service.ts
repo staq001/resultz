@@ -8,6 +8,7 @@ import type {
   DepartmentService as DS,
 } from "../types";
 import { BadRequest, InternalServerError, NotFound } from "../utils/error";
+import { logger } from "@/utils/logger";
 
 export class DepartmentService implements DS {
   async createDepartment(payload: NewDepartment) {
@@ -15,18 +16,17 @@ export class DepartmentService implements DS {
       const { name, faculty } = payload;
       const dept = await this.getDepartmentByName(faculty, name);
 
-      if (dept)
-        throw new BadRequest(
-          `Department already exists int faculty: ${faculty}`,
-        );
+      if (dept) throw new BadRequest(`Department already exists in ${faculty}`);
 
-      const { values } = await this.insertWithContext(departments, {
+      const values = await this.insertWithContext(departments, {
         name,
         faculty,
       });
 
       return values;
     } catch (e) {
+      logger.error(`Error creating new department, ${e}`);
+      if (e instanceof BadRequest) throw e;
       throw new InternalServerError("Error creating new department");
     }
   }
@@ -44,6 +44,7 @@ export class DepartmentService implements DS {
       if (!result || result.affectedRows === 0)
         throw new NotFound("Department does not exist");
     } catch (e) {
+      logger.error(`Error updating department, ${e}`);
       if (e instanceof NotFound) throw e;
       throw new InternalServerError("Error updating department");
     }
@@ -59,6 +60,7 @@ export class DepartmentService implements DS {
 
       return department;
     } catch (e) {
+      logger.error(`Error finding department, ${e}`);
       if (e instanceof NotFound) throw e;
       throw new InternalServerError("Errr finding department");
     }
@@ -73,6 +75,7 @@ export class DepartmentService implements DS {
 
       return department;
     } catch (e) {
+      logger.error(`Error finding department, ${e}`);
       if (e instanceof NotFound) throw e;
       throw new InternalServerError("Errr finding department");
     }
@@ -141,6 +144,7 @@ export class DepartmentService implements DS {
         departments: allDepartments,
       };
     } catch (e) {
+      logger.error(`Error fetching departments, ${e}`);
       if (e instanceof NotFound) throw e;
       throw new InternalServerError("Error fetching departments");
     }
@@ -150,6 +154,7 @@ export class DepartmentService implements DS {
     try {
       await db.delete(departments).where(eq(departments.id, departmentId));
     } catch (e) {
+      logger.error(`Error deleting department, ${e}`);
       throw new InternalServerError("Error deleting department");
     }
   }
@@ -160,9 +165,11 @@ export class DepartmentService implements DS {
 
       if (!result || result.affectedRows !== 1)
         throw new InternalServerError("Insert failed: no rows were inserted");
-      return { values };
+
+      return values;
     } catch (err) {
-      throw err;
+      logger.error(`Error inserting into table, ${err}`);
+      throw new InternalServerError("Error inserting into table");
     }
   }
 
@@ -174,10 +181,10 @@ export class DepartmentService implements DS {
         .where(
           and(eq(departments.faculty, faculty), eq(departments.name, name)),
         );
-      if (!department) throw new NotFound("Department not found");
 
       return department;
     } catch (e) {
+      logger.error(`Error finding department, ${e}`);
       if (e instanceof NotFound) throw e;
       throw new InternalServerError("Errr finding department");
     }

@@ -1,18 +1,23 @@
 import type { NewCourse, Values, Table, CourseService as CS } from "../types";
 import { courses } from "../db/schema/course";
 import { db } from "../db/mysql";
-import { InternalServerError, NotFound } from "../utils/error";
+import { BadRequest, InternalServerError, NotFound } from "../utils/error";
 import { logger } from "../utils/logger";
 import { eq, getTableColumns, sql } from "drizzle-orm";
 
 export class CourseService implements CS {
   async addCourse(courseValues: NewCourse) {
     try {
+      if (await this.findCourseByCourseCode(courseValues.courseCode))
+        throw new BadRequest("This course code already exists");
+
       const { values } = await this.insertWithContext(courses, courseValues);
+
       logger.info("Course created...");
       return values;
     } catch (e) {
       logger.error("Error creating course", e);
+      if (e instanceof BadRequest) throw e;
       throw new InternalServerError("Error creating course");
     }
   }
@@ -55,6 +60,20 @@ export class CourseService implements CS {
     } catch (e) {
       if (e instanceof NotFound) throw e;
       throw new InternalServerError("Error finding course");
+    }
+  }
+
+  private async findCourseByCourseCode(ccode: string) {
+    try {
+      const { id, courseCode } = getTableColumns(courses);
+      const [course] = await db
+        .select({ id, courseCode })
+        .from(courses)
+        .where(eq(courses.courseCode, ccode));
+      return course;
+    } catch (e) {
+      logger.error("Error finding course by course code", e);
+      throw new InternalServerError("Error finding course by course code");
     }
   }
 
