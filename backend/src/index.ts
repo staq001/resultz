@@ -14,6 +14,7 @@ import { bodyLimit } from "hono/body-limit";
 import { limiter } from "@/middleware/hono-rate-limiter";
 import router from "./routers/healthcheck";
 import { connectRedis } from "@/redis/client";
+import cloudinaryConfig from "@/utils/cloudinary";
 
 const app = new Hono();
 
@@ -45,6 +46,11 @@ app.use(
   }),
 );
 
+app.use(async (_c, next) => {
+  cloudinaryConfig;
+  await next();
+});
+
 app.route("/api/v1", usersRouter);
 app.route("/api/v1", coursesRouter);
 app.route("/api/v1", scoresRouter);
@@ -64,7 +70,7 @@ const server = Bun.serve({
 });
 
 connectRedis();
-log.info(`Server started on http://localhost:${server.port}`);
+log.info(`Server started on port ${server.port}`);
 
 process.on("SIGTERM", () => {
   log.info("SIGTERM received, shutting down gracefully...");

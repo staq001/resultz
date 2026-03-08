@@ -176,6 +176,7 @@ export class UserService implements US {
 
       return { newUrl: secure_url };
     } catch (e) {
+      console.log(e);
       logger.error(`Error uploading user image, ${e}`);
       if (e instanceof NotFound) throw e;
       if (e instanceof BadRequest) throw e;
@@ -191,7 +192,7 @@ export class UserService implements US {
         await cloudinary.uploader.destroy(oldImage);
       }
       const results = await cloudinary.uploader.upload(
-        `data:image/png;base64,${base64}`,
+        `data:${file.type};base64,${base64}`,
       );
 
       return { secure_url: results.secure_url, publicId: results.public_id };

@@ -76,8 +76,7 @@ export class Auth {
           and(eq(users.email, userEmail), eq(users.matricNo, userMatricNo)),
         );
 
-      if (!user) throw new Unauthorized("Please authenticate!");
-      if (user.softDeleted) throw new Unauthorized("Please authenticate!");
+      if (!user || user.softDeleted) throw new Unauthorized("Please authenticate!");
 
       return this.formatUserObject(user);
     } catch (e) {

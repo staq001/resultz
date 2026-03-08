@@ -218,11 +218,11 @@ export class UserController {
 
   uploadAvatar = async (c: Context<AppEnv>) => {
     const body = await c.req.parseBody();
-    const file = body.image;
+    const file = body["image"] as File;
 
     const { id } = c.get("user");
     try {
-      const { newUrl } = await this.userService.uploadAvatar(id, file as File);
+      const { newUrl } = await this.userService.uploadAvatar(id, file);
 
       return c.json({
         status: 200,
