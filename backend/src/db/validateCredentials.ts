@@ -28,7 +28,7 @@ export async function validateCredentials(
       throw new Unauthorized("Account locked. Try again in 10 minutes");
 
     if (user && user.password) {
-      const isMatch = verifyPassword(user.password, inputPassword);
+      const isMatch = await verifyPassword(user.password, inputPassword);
       if (!isMatch) {
         await recordFailure(inputEmail);
         throw new NotFound("Wrong email/password combination");

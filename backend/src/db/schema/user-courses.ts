@@ -2,7 +2,7 @@ import {
   mysqlTable,
   varchar,
   timestamp,
-  uniqueIndex,
+  unique,
   int,
 } from "drizzle-orm/mysql-core";
 import { users } from "./user";
@@ -27,6 +27,11 @@ export const courseRegistrations = mysqlTable(
     registeredAt: timestamp("registered_at").defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("unique_user_course").on(table.userId, table.courseId),
+    unique("unique_user_course_semester_year").on(
+      table.userId,
+      table.courseId,
+      table.semester,
+      table.year,
+    ),
   ],
 );

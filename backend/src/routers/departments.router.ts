@@ -7,7 +7,7 @@ import {
   updateDepartmentSchema,
 } from "@/schema/department.schema";
 
-const { authentication } = new Auth();
+const { authentication, adminProtectedRoute } = new Auth();
 const app = new Hono();
 
 const {
@@ -23,6 +23,7 @@ app.post(
   "/departments/create",
   zodValidator(createDepartmentSchema),
   authentication,
+  adminProtectedRoute,
   createDepartment,
 );
 
@@ -30,15 +31,31 @@ app.put(
   "/departments/update/:departmentId",
   zodValidator(updateDepartmentSchema),
   authentication,
+  adminProtectedRoute,
   updateDepartment,
 );
 
-app.get("/departments/:departmentId", authentication, getDepartment);
+app.get(
+  "/departments/:departmentId",
+  authentication,
+  adminProtectedRoute,
+  getDepartment,
+);
 
-app.get("/departments/faculty", authentication, getDepartmentByFaculty);
+app.get(
+  "/departments/faculty",
+  authentication,
+  adminProtectedRoute,
+  getDepartmentByFaculty,
+);
 
-app.get("/departments", authentication, getAllDepartments);
+app.get("/departments", authentication, adminProtectedRoute, getAllDepartments);
 
-app.delete("/departments/:departmentId", authentication, deleteDepartment);
+app.delete(
+  "/departments/:departmentId",
+  authentication,
+  adminProtectedRoute,
+  deleteDepartment,
+);
 
 export default app;

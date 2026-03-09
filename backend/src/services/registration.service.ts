@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, getTableColumns, sql } from "drizzle-orm";
 import { db } from "@/db/mysql";
 import { courseRegistrations, courses, users } from "@/db/schema";
 import { BadRequest, InternalServerError, NotFound } from "@/utils/error";
@@ -13,19 +13,15 @@ export class Registration {
   async registerCourse(params: RegisterCourse) {
     try {
       return await db.transaction(async (tx) => {
-        const { userId, courseId, semester, year } = params;
+        const { userId, courseCode, semester, year } = params;
 
         const user = await tx.query.users.findFirst({
           where: eq(users.id, userId),
         });
-
         if (!user) throw new NotFound("User not found");
 
-        const course = await tx.query.courses.findFirst({
-          where: eq(courses.id, courseId),
-        });
-
-        if (!course) throw new NotFound("Course not found");
+        const courseDetails = await this.findCourseByCourseCode(courseCode);
+        if (!courseDetails) throw new NotFound("Course not found");
 
         const checkNoOfRegisteredCourses =
           await this.checkNumberOfRegisteredCourses({
@@ -41,7 +37,7 @@ export class Registration {
         const existing = await tx.query.courseRegistrations.findFirst({
           where: and(
             eq(courseRegistrations.userId, userId),
-            eq(courseRegistrations.courseId, courseId),
+            eq(courseRegistrations.courseId, courseDetails.id),
             eq(courseRegistrations.semester, semester),
             eq(courseRegistrations.year, year),
           ),
@@ -51,17 +47,22 @@ export class Registration {
 
         await tx.insert(courseRegistrations).values({
           userId,
-          courseId,
+          courseId: courseDetails.id,
           semester,
           year,
         });
 
-        return { user: user.name, course: course.courseCode };
+        return { course: courseDetails.courseCode };
       });
     } catch (e) {
       logger.error(`Unable to register course , ${e}`);
       if (e instanceof BadRequest) throw e;
       if (e instanceof NotFound) throw e;
+      if (this.isDuplicateEntryError(e)) {
+        throw new BadRequest(
+          "User already registered for this course in the selected semester and year",
+        );
+      }
       throw new InternalServerError("Unable to register course");
     }
   }
@@ -167,5 +168,38 @@ export class Registration {
 
       return false;
     });
+  }
+
+  private isDuplicateEntryError(error: unknown) {
+    if (!error || typeof error !== "object") return false;
+
+    const mysqlError = error as {
+      code?: string;
+      errno?: number;
+      message?: string;
+    };
+    return (
+      mysqlError.code === "ER_DUP_ENTRY" ||
+      mysqlError.errno === 1062 ||
+      Boolean(mysqlError.message?.includes("Duplicate entry"))
+    );
+  }
+  
+  async findCourseByCourseCode(courseCode: string) {
+    try {
+      const course = await db.query.courses.findFirst({
+        where: eq(courses.courseCode, courseCode),
+      });
+      if (!course) throw new NotFound("Course not found");
+
+      return this.formatCourseData(course);
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  private formatCourseData(course: any) {
+    const { createdBy, createdAt, departmentId, ...rest } = course;
+    return rest;
   }
 }

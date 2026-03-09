@@ -4,7 +4,7 @@ import { Auth } from "@/middleware/auth";
 import { CourseController } from "@/controllers/courses.controller";
 import { addCourseSchema, updateCourseSchema } from "@/schema/courses.schema";
 
-const { authentication } = new Auth();
+const { authentication, adminProtectedRoute } = new Auth();
 const app = new Hono();
 
 const {
@@ -19,20 +19,37 @@ app.post(
   "/courses/create/:departmentId",
   zodValidator(addCourseSchema),
   authentication,
+  adminProtectedRoute,
   addCourse,
 );
 
-app.delete("/courses/delete/:courseId", authentication, deleteCourse);
+app.delete(
+  "/courses/delete/:courseId",
+  authentication,
+  adminProtectedRoute,
+  deleteCourse,
+);
 
 app.patch(
   "/courses/update/:courseId",
   zodValidator(updateCourseSchema),
   authentication,
+  adminProtectedRoute,
   updateCourse,
 );
 
-app.get("/courses/:courseId", authentication, findSpecificCourse);
+app.get(
+  "/courses/:courseId",
+  authentication,
+  adminProtectedRoute,
+  findSpecificCourse,
+);
 
-app.get("/courses/department/:departmentId", authentication, getAllCourses);
+app.get(
+  "/courses/department/:departmentId",
+  authentication,
+  adminProtectedRoute,
+  getAllCourses,
+);
 
 export default app;
