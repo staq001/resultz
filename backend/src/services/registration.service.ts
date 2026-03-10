@@ -184,7 +184,7 @@ export class Registration {
       Boolean(mysqlError.message?.includes("Duplicate entry"))
     );
   }
-  
+
   async findCourseByCourseCode(courseCode: string) {
     try {
       const course = await db.query.courses.findFirst({
@@ -195,6 +195,52 @@ export class Registration {
       return this.formatCourseData(course);
     } catch (e) {
       throw e;
+    }
+  }
+
+  async fetchRegisteredUsersForCourse(
+    courseCode: string,
+    semester: number,
+    year: number,
+  ) {
+    try {
+      const course = await db.query.courses.findFirst({
+        where: eq(courses.courseCode, courseCode),
+      });
+
+      if (!course) throw new NotFound("Course not found");
+
+      const registeredUsers = await db
+        .select({
+          registrationId: courseRegistrations.id,
+          userId: users.id,
+          name: users.name,
+          matricNo: users.matricNo,
+          email: users.email,
+          semester: courseRegistrations.semester,
+          year: courseRegistrations.year,
+        })
+        .from(courseRegistrations)
+        .innerJoin(users, eq(courseRegistrations.userId, users.id))
+        .where(
+          and(
+            eq(courseRegistrations.courseId, course.id),
+            eq(courseRegistrations.semester, semester),
+            eq(courseRegistrations.year, year),
+          ),
+        );
+
+      if (!registeredUsers || registeredUsers.length === 0)
+        throw new NotFound("No users registered for this course");
+
+      return {
+        course: this.formatCourseData(course),
+        registeredUsers,
+      };
+    } catch (e) {
+      logger.error(`Unable to fetch registered users for course, ${e}`);
+      if (e instanceof NotFound) throw e;
+      throw new InternalServerError("Unable to fetch registered users");
     }
   }
 

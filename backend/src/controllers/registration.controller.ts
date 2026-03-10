@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import { Registration } from "../services/registration.service";
 import type { AppEnv, RegisterCourseContext } from "../types";
+import { BadRequest } from "@/utils/error";
 
 export class RegistrationController {
   private registration;
@@ -111,6 +112,45 @@ export class RegistrationController {
 
           message: "Course fetched successfully!",
           data: { course },
+        },
+        200,
+      );
+    } catch (e: any) {
+      return c.json(
+        {
+          status: e.status || 500,
+          message: e.message || "Internal Server Error",
+        },
+        e.status || 500,
+      );
+    }
+  };
+
+  fetchRegisteredUsersForCourse = async (c: Context<AppEnv>) => {
+    const { courseCode } = c.req.param();
+    const { semester, year } = c.req.query();
+
+    try {
+      const sem = Number(semester);
+      const yr = Number(year);
+
+      if (!semester || !year || Number.isNaN(sem) || Number.isNaN(yr)) {
+        throw new BadRequest(
+          "Valid semester and year query params are required",
+        );
+      }
+
+      const data = await this.registration.fetchRegisteredUsersForCourse(
+        courseCode as string,
+        sem,
+        yr,
+      );
+
+      return c.json(
+        {
+          status: 200,
+          message: "Registered users fetched successfully!",
+          data,
         },
         200,
       );

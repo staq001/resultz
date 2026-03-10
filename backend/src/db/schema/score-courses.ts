@@ -22,7 +22,8 @@ export const scoreCourses = mysqlTable(
     registeredCourseId: varchar("registered_course_id", { length: 36 })
       .notNull()
       .references(() => courseRegistrations.id, { onDelete: "cascade" }),
-    score: int("score").notNull(),
+    testScore: int("test_score").notNull(),
+    examScore: int("exam_score").notNull(),
     semester: int("semester").notNull(),
     year: int("year").notNull(),
     scoredAt: timestamp("registered_at").defaultNow().notNull(),
