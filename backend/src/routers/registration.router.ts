@@ -5,7 +5,7 @@ import { Auth } from "@/middleware/auth";
 import { RegistrationController } from "@/controllers/registration.controller";
 import { registerCourseSchema } from "@/schema/registration.schema";
 
-const { authentication } = new Auth();
+const { authentication, adminProtectedRoute } = new Auth();
 const app = new Hono();
 
 const {
@@ -13,6 +13,7 @@ const {
   fetchRegisteredCourse,
   fetchRegisteredCoursesBySemester,
   findCourseByCourseCode,
+  fetchRegisteredUsersForCourse,
 } = new RegistrationController();
 
 app.post(
@@ -32,6 +33,13 @@ app.get(
   "/courses-registrations/course",
   authentication,
   findCourseByCourseCode,
+);
+
+app.get(
+  "/courses-registrations/course/:courseCode/users",
+  authentication,
+  adminProtectedRoute,
+  fetchRegisteredUsersForCourse,
 );
 
 app.get(

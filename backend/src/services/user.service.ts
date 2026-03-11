@@ -262,7 +262,7 @@ export class UserService implements US {
 
         const isMatch = verifyHash(otp.toString(), salt, hash);
         if (!isMatch) {
-          await recordFailure(userId, 5, "otp");
+          await recordFailure(userId, 5);
           throw new throwAppError("OTP verification failed", 401);
         }
         await db

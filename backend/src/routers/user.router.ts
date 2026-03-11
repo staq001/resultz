@@ -20,7 +20,7 @@ app.post(
   "/users/signup",
   createRateLimiterMiddleware("user-signup", {
     windowSeconds: 60,
-    maxRequests: 7,
+    maxRequests: 10,
   }),
   zodValidator(signupSchema),
   userController.signup,
@@ -30,7 +30,7 @@ app.post(
   "/users/login",
   createRateLimiterMiddleware("user-login", {
     windowSeconds: 60,
-    maxRequests: 7,
+    maxRequests: 10,
   }),
   zodValidator(loginSchema),
   userController.login,

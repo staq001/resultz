@@ -30,7 +30,7 @@ export async function validateCredentials(
     if (user && user.password) {
       const isMatch = await verifyPassword(user.password, inputPassword);
       if (!isMatch) {
-        await recordFailure(inputEmail);
+        await recordFailure(inputEmail, 7); //lock account after 7 failed atmpts.
         throw new NotFound("Wrong email/password combination");
       }
       await recordSuccess(inputEmail);

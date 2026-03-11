@@ -7,17 +7,14 @@ const LOCK_SECONDS = 10 * 60;
 export async function recordFailure(
   identifier: string,
   maxAttempts: number = MAX_ATTEMPTS,
-  operation: string = "normal",
 ) {
   const failKey = `login:fail:${identifier}`;
   const lockKey = `login:lock:${identifier}`;
 
   const attempts = await client.incr(failKey);
 
-  if (operation === "normal") {
-    if (attempts === 1) {
-      await client.expire(failKey, WINDOW_SECONDS);
-    }
+  if (attempts === 1) {
+    await client.expire(failKey, WINDOW_SECONDS);
   }
 
   if (attempts >= maxAttempts) {
@@ -31,6 +28,6 @@ export async function recordSuccess(identifier: string) {
 }
 
 export async function isAccountLocked(identifier: string) {
-  const lockKey = `lock:lock:${identifier}`;
+  const lockKey = `login:lock:${identifier}`;
   return await client.exists(lockKey);
 }

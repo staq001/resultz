@@ -5,64 +5,45 @@ import type { Context, HonoRequest, MiddlewareHandler, Next } from "hono";
 
 const RATE_LIMIT_SCRIPT = `
 local key = KEYS[1]
-local now = tonumber(ARGV[1])
-local windowStart = tonumber(ARGV[2])
-local maxRequests = tonumber(ARGV[3])
-local windowSeconds = tonumber(ARGV[4])
-local requestId = ARGV[5]
+local maxRequests = tonumber(ARGV[1])
+local windowSeconds = tonumber(ARGV[2])
 
-redis.call("ZREMRANGEBYSCORE", key, 0, windowStart)
-local currentCount = redis.call("ZCARD", key)
+local currentCount = redis.call("INCR", key)
+if currentCount == 1 then
+  redis.call("EXPIRE", key, windowSeconds)
+end
+
+local ttl = redis.call("TTL", key)
+if ttl < 0 then
+  ttl = windowSeconds
+end
 
 local allowed = 0
-if currentCount < maxRequests then
-  redis.call("ZADD", key, now, requestId)
+if currentCount <= maxRequests then
   allowed = 1
-  currentCount = currentCount + 1
 end
 
-
-redis.call("EXPIRE", key, windowSeconds + 1 )
-
-
-local oldest = redis.call("ZRANGE", key, 0, 0, "WITHSCORES")
-local oldestTimestamp =0
-if oldest and oldest[2] then
-  oldestTimestamp = tonumber(oldest[2])
-end
-
-return { allowed, currentCount, oldestTimestamp }
+return { allowed, currentCount, ttl }
 `;
 
 export async function rateLimit(
   key: string,
   config: RateLimiterConfig,
 ): Promise<RateLimiterResult> {
-  const now = Date.now();
-  const windowMs = config.windowSeconds * 1000;
-  const windowStart = now - config.windowSeconds * 1000;
   const redisKey = `ratelimit:${config.identifier}:${key}`;
-  const requestId = `${now}-${Math.random().toString(36).substring(2)}`;
 
   try {
     const result = (await client.send("EVAL", [
       RATE_LIMIT_SCRIPT,
       "1",
       redisKey,
-      now.toString(),
-      windowStart.toString(),
       config.maxRequests.toString(),
       config.windowSeconds.toString(),
-      requestId,
     ])) as [number, number, number];
 
-    const [allowed, currentCount, oldestTimestamp] = result;
+    const [allowed, currentCount, ttl] = result;
+    const resetIn = Math.max(1, Number(ttl) || config.windowSeconds);
 
-    let resetIn = config.windowSeconds;
-    if (oldestTimestamp > 0) {
-      const oldestExpiry = oldestTimestamp + windowMs;
-      resetIn = Math.max(1, Math.ceil((oldestExpiry - now) / 1000));
-    }
     return {
       allowed: allowed === 1,
       current: currentCount,
@@ -73,11 +54,11 @@ export async function rateLimit(
   } catch (e) {
     logger.error(`Rate limiter error: ${e}`);
     return {
-      allowed: true,
+      allowed: false,
       current: 0,
       limit: config.maxRequests,
       resetIn: config.windowSeconds,
-      remaining: config.maxRequests,
+      remaining: 0,
     };
   }
 }
@@ -109,7 +90,7 @@ export function createRateLimiterMiddleware(
 ): MiddlewareHandler {
   return async (c: Context, next: Next) => {
     const ip = getClientIp(c.req);
-    const identifier = `${ip}:${c.req.path}`;
+    const identifier = ip;
     const result = await rateLimit(key, { ...config, identifier });
 
     c.header("X-RateLimit-Limit", result.limit.toString());
@@ -118,7 +99,12 @@ export function createRateLimiterMiddleware(
     c.header("Retry-After", result.resetIn.toString());
 
     if (!result.allowed) {
-      return c.json({ message: "Too Many Requests" }, 429);
+      return c.json(
+        {
+          message: `Too Many Requests. Try again in ${result.resetIn} seconds.`,
+        },
+        429,
+      );
     }
 
     await next();
