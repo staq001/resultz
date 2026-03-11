@@ -8,6 +8,7 @@ import {
 import { users } from "./user";
 import { courses } from "./course";
 import { sql } from "drizzle-orm";
+import { session } from "./session";
 
 export const courseRegistrations = mysqlTable(
   "course_registrations",
@@ -22,8 +23,9 @@ export const courseRegistrations = mysqlTable(
     courseId: varchar("course_id", { length: 36 })
       .notNull()
       .references(() => courses.id, { onDelete: "cascade" }),
-    semester: int("semester").notNull(),
-    year: int("year").notNull(),
+    semester: varchar("semester", {length: 36})
+      .notNull()
+      .references(() => session.id, { onDelete: "cascade" }),
     registeredAt: timestamp("registered_at").defaultNow().notNull(),
   },
   (table) => [
@@ -31,7 +33,6 @@ export const courseRegistrations = mysqlTable(
       table.userId,
       table.courseId,
       table.semester,
-      table.year,
     ),
   ],
 );

@@ -8,6 +8,7 @@ import {
 import { sql } from "drizzle-orm";
 import { courseRegistrations } from "./user-courses";
 import { users } from ".";
+import { session } from "./session";
 
 export const scoreCourses = mysqlTable(
   "course_score",
@@ -24,8 +25,9 @@ export const scoreCourses = mysqlTable(
       .references(() => courseRegistrations.id, { onDelete: "cascade" }),
     testScore: int("test_score").notNull(),
     examScore: int("exam_score").notNull(),
-    semester: int("semester").notNull(),
-    year: int("year").notNull(),
+    semester: varchar("semester", { length: 36 })
+      .notNull()
+      .references(() => session.id, { onDelete: "cascade" }),
     scoredAt: timestamp("registered_at").defaultNow().notNull(),
   },
   (table) => [uniqueIndex("unique_course_score").on(table.registeredCourseId)],

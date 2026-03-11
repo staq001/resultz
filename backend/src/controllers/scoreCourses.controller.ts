@@ -1,5 +1,6 @@
 import { Scores } from "@/services/scoreCourses.service";
 import type { AppEnv, ScoreCourseContext } from "@/types";
+import { BadRequest } from "@/utils/error";
 import type { Context } from "hono";
 
 export class ScoreController {
@@ -87,15 +88,14 @@ export class ScoreController {
 
   getAllScoredCoursesBySemsesterorYear = async (c: Context<AppEnv>) => {
     const user = c.get("user");
-    const { semester, year } = c.req.query();
+    const { semester } = c.req.query();
     try {
-      const sem = Number(semester) || 1;
-      const yr = Number(year) || new Date().getUTCFullYear();
+      if (!semester)
+        throw new BadRequest("Valid semester query params is required");
 
-      const scores = await this.scoreService.getScoresBySemesterOrYear(
+      const scores = await this.scoreService.getScoresBySemester(
         user.id,
-        yr,
-        sem,
+        semester,
       );
 
       return c.json(
@@ -117,15 +117,10 @@ export class ScoreController {
     }
   };
   getAllScoredCoursesBySemsesterorYearAdmin = async (c: Context<AppEnv>) => {
-    const { semester, year } = c.req.query();
+    const { semester } = c.req.query();
     try {
-      const sem = Number(semester) || 1;
-      const yr = Number(year) || new Date().getUTCFullYear();
-
-      const scores = await this.scoreService.getScoresBySemesterOrYearA(
-        yr,
-        sem,
-      );
+      if (!semester) throw new BadRequest("Semester is required");
+      const scores = await this.scoreService.getScoresBySemesterA(semester);
 
       return c.json(
         {
@@ -148,17 +143,15 @@ export class ScoreController {
 
   getAllRegisteredCoursesBySpecificUser = async (c: Context<AppEnv>) => {
     const { userId } = c.req.param();
-    const { semester, year } = c.req.query();
+    const { semester } = c.req.query();
 
-    const sem = Number(semester) || 1;
-    const yr = Number(year) || new Date().getUTCFullYear();
+    if (!semester) throw new BadRequest("Semester is required");
 
     try {
       const registeredCourses =
         await this.scoreService.getAllRegisteredCoursesByASpecificUser(
           userId as string,
-          yr,
-          sem,
+          semester,
         );
 
       return c.json(

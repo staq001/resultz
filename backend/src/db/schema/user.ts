@@ -13,10 +13,11 @@ export const users = mysqlTable("users", {
     .notNull()
     .default(sql`(uuid())`),
   name: varchar("name", { length: 255 }).notNull(),
-  matricNo: varchar("matric_no", { length: 20 }).notNull().unique(),
+  matricNo: varchar("matric_no", { length: 20 }).unique(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
   isAdmin: boolean("is_admin").default(false),
+  isStaff: boolean("is_staff").default(false),
   avatar: varchar("avatar", { length: 255 }),
   publicId: varchar("avatar_public_id", { length: 255 }),
   softDeleted: boolean("soft_deleted").default(false),

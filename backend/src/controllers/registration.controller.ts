@@ -67,19 +67,15 @@ export class RegistrationController {
   };
 
   fetchRegisteredCoursesBySemester = async (c: Context<AppEnv>) => {
-    const { semester, year } = c.req.query();
+    const { semester } = c.req.query();
     const { id } = c.get("user");
 
     try {
-      const sem = Number(semester);
-      const yr = Number(year) || new Date().getUTCFullYear();
+      if (!semester)
+        throw new BadRequest("Valid semester query params is required");
 
       const registeredCourses =
-        await this.registration.findRegisteredCoursesBySemesterOrYear(
-          id,
-          yr,
-          sem,
-        );
+        await this.registration.findRegisteredCoursesBySemester(id, semester);
 
       return c.json(
         {
@@ -128,22 +124,15 @@ export class RegistrationController {
 
   fetchRegisteredUsersForCourse = async (c: Context<AppEnv>) => {
     const { courseCode } = c.req.param();
-    const { semester, year } = c.req.query();
+    const { semester } = c.req.query();
 
     try {
-      const sem = Number(semester);
-      const yr = Number(year);
-
-      if (!semester || !year || Number.isNaN(sem) || Number.isNaN(yr)) {
-        throw new BadRequest(
-          "Valid semester and year query params are required",
-        );
-      }
+      if (!semester)
+        throw new BadRequest("Valid semester query params is required");
 
       const data = await this.registration.fetchRegisteredUsersForCourse(
         courseCode as string,
-        sem,
-        yr,
+        semester,
       );
 
       return c.json(

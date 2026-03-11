@@ -17,9 +17,9 @@ const {
 
 app.post(
   "/courses/create/:departmentId",
-  zodValidator(addCourseSchema),
   authentication,
   adminProtectedRoute,
+  zodValidator(addCourseSchema),
   addCourse,
 );
 
@@ -32,9 +32,9 @@ app.delete(
 
 app.patch(
   "/courses/update/:courseId",
-  zodValidator(updateCourseSchema),
   authentication,
   adminProtectedRoute,
+  zodValidator(updateCourseSchema),
   updateCourse,
 );
 

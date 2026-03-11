@@ -3,7 +3,6 @@ import { db } from "@/db/mysql";
 import { courseRegistrations, scoreCourses } from "@/db/schema";
 import { BadRequest, InternalServerError, NotFound } from "@/utils/error";
 import { logger } from "@/utils/logger";
-import type { FindCoursesBySemester } from "@/types";
 
 export class Scores {
   async scoreCourse(
@@ -31,7 +30,6 @@ export class Scores {
           testScore,
           registeredCourseId,
           semester: registeredCourse.semester,
-          year: registeredCourse.year,
         });
 
         return;
@@ -84,16 +82,9 @@ export class Scores {
     }
   }
 
-  async getScoresBySemesterOrYear(
-    userId: string,
-    year: number,
-    semester?: number,
-  ) {
+  async getScoresBySemester(userId: string, semester: string) {
     try {
-      if (semester && year) {
-        return this.getAllScoredCoursesBySemsester({ semester, year }, userId);
-      }
-      return this.getAllScoredCoursesByYear(year, userId);
+      return this.getAllScoredCoursesBySemsester(semester, userId);
     } catch (e) {
       logger.error(`Couldnt fetch scores, ${e}`);
       if (e instanceof NotFound) throw e;
@@ -102,11 +93,9 @@ export class Scores {
   }
 
   private async getAllScoredCoursesBySemsester(
-    payload: FindCoursesBySemester,
+    semester: string,
     userId?: string,
   ) {
-    const { semester, year } = payload;
-
     try {
       if (userId) {
         const allCourses = await db
@@ -115,7 +104,7 @@ export class Scores {
           .where(
             and(
               eq(scoreCourses.semester, semester),
-              eq(scoreCourses.year, year),
+
               eq(scoreCourses.userId, userId),
             ),
           );
@@ -128,12 +117,7 @@ export class Scores {
         const allCourses = await db
           .select()
           .from(scoreCourses)
-          .where(
-            and(
-              eq(scoreCourses.semester, semester),
-              eq(scoreCourses.year, year),
-            ),
-          );
+          .where(and(eq(scoreCourses.semester, semester)));
 
         if (!allCourses || allCourses.length === 0)
           throw new NotFound("No scores found");
@@ -145,42 +129,9 @@ export class Scores {
     }
   }
 
-  private async getAllScoredCoursesByYear(year: number, userId?: string) {
+  async getScoresBySemesterA(semester: string) {
     try {
-      if (userId) {
-        const allCourses = await db
-          .select()
-          .from(scoreCourses)
-          .where(
-            and(eq(scoreCourses.userId, userId), eq(scoreCourses.year, year)),
-          );
-
-        if (!allCourses || allCourses.length === 0)
-          throw new NotFound("No scores found");
-
-        return allCourses;
-      } else {
-        const allCourses = await db
-          .select()
-          .from(scoreCourses)
-          .where(eq(scoreCourses.year, year));
-
-        if (!allCourses || allCourses.length === 0)
-          throw new NotFound("No scores found");
-
-        return allCourses;
-      }
-    } catch (e) {
-      throw e;
-    }
-  }
-
-  async getScoresBySemesterOrYearA(year: number, semester?: number) {
-    try {
-      if (semester && year) {
-        return this.getAllScoredCoursesBySemsester({ semester, year });
-      }
-      return this.getAllScoredCoursesByYear(year);
+      return this.getAllScoredCoursesBySemsester(semester);
     } catch (e) {
       logger.error(`Couldnt fetch scores, ${e}`);
       if (e instanceof NotFound) throw e;
@@ -190,8 +141,7 @@ export class Scores {
 
   async getAllRegisteredCoursesByASpecificUser(
     userId: string,
-    year: number,
-    semester: number,
+    semester: string,
   ) {
     try {
       const allCourses = await db
@@ -200,7 +150,6 @@ export class Scores {
         .where(
           and(
             eq(courseRegistrations.userId, userId),
-            eq(courseRegistrations.year, year),
             eq(courseRegistrations.semester, semester),
           ),
         );

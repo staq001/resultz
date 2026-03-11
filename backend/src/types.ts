@@ -19,6 +19,7 @@ import type {
 } from "@/schema/department.schema";
 import type { registerCourseSchema } from "@/schema/registration.schema";
 import type { scoreCourseSchema } from "@/schema/scoreCourses.schema";
+import type { addSessionSchema } from "./schema/session.schema";
 
 export interface RateLimiterConfig {
   identifier: string;
@@ -62,11 +63,17 @@ type LoginSchema = z.infer<typeof loginSchema>;
 type UpdateSchema = z.infer<typeof updateSchema>;
 type UpdatePasswordSchema = z.infer<typeof updatePasswordSchema>;
 type VerifyOtpSchema = z.infer<typeof verifyOtpSchema>;
+type AddSessionSchema = z.infer<typeof addSessionSchema>;
 
 export type SignupContext = Context<
   Env,
   any,
   { in: { json: SignupSchema }; out: { json: SignupSchema } }
+>;
+export type SessionContext = Context<
+  Env,
+  any,
+  { in: { json: AddSessionSchema }; out: { json: AddSessionSchema } }
 >;
 
 export type GetUserContext = Context<AppEnv, any>;
@@ -97,7 +104,7 @@ export type VerifyOTPContext = Context<
 
 export type JWTPayload = {
   email: string;
-  matricNo: string;
+  id: string;
   sessionId: string;
 };
 
@@ -123,7 +130,7 @@ export type loginOptions = {
 export type userOptions = {
   name: string;
   email: string;
-  matricNo: string;
+  matricNo?: string;
   password: string;
 };
 
@@ -169,8 +176,7 @@ export type NewCourse = typeof courses.$inferInsert;
 export type Course = typeof courses.$inferSelect;
 
 export type FindCoursesBySemester = {
-  semester: number;
-  year: number;
+  semester: string;
 };
 
 export interface CourseService {
@@ -265,14 +271,12 @@ export type RegisterCourseContext = Context<
 export type RegisterCourse = {
   userId: string;
   courseCode: string;
-  semester: number;
-  year: number;
+  semester: string;
 };
 
 export type CheckRegisteredCourses = {
   userId: string;
-  semester: number;
-  year: number;
+  semester: string;
 };
 
 /** SCORES */

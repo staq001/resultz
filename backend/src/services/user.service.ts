@@ -35,13 +35,15 @@ export class UserService implements US {
   async createUser(payload: userOptions) {
     try {
       const { id, matricNo, email } = getTableColumns(users);
-      const [findExistingMatricNo] = await db
-        .select({ id, matricNo })
-        .from(users)
-        .where(eq(users.matricNo, payload.matricNo));
+      if (payload.matricNo) {
+        const [findExistingMatricNo] = await db
+          .select({ id, matricNo })
+          .from(users)
+          .where(eq(users.matricNo, payload.matricNo));
 
-      if (findExistingMatricNo?.matricNo === payload.matricNo)
-        throw new Conflict("A User with this matric no already exists");
+        if (findExistingMatricNo?.matricNo === payload.matricNo)
+          throw new Conflict("A User with this matric no already exists");
+      }
 
       const [findExistingEmail] = await db
         .select({ id, email })
@@ -73,10 +75,10 @@ export class UserService implements US {
       const sessionId = randomUUID();
       const token = await generateAuthToken({
         email: user.email,
-        matricNo: user.matricNo,
+        id: user.id,
         sessionId,
       });
-      await setSession(sessionId, user.matricNo);
+      await setSession(sessionId, user.id);
 
       logger.info("User successfully logged in...");
       return { user: this.formatNewUserObject(user), token };

@@ -52,19 +52,19 @@ export class Auth {
   );
 
   private async tokenValidator(token: string) {
-    const { email, sessionId, matricNo } = await verifyToken(token);
+    const { email, sessionId, id } = await verifyToken(token);
 
     try {
       const sessionValid = await verifySession(sessionId);
       if (sessionValid) {
-        return this.getUser(email, matricNo);
+        return this.getUser(email, id);
       } else throw new Unauthorized("Please authenticate!");
     } catch (e) {
       throw e;
     }
   }
 
-  private async getUser(userEmail: string, userMatricNo: string) {
+  private async getUser(userEmail: string, userId: string) {
     try {
       const { id, name, email, matricNo, avatar, isAdmin, softDeleted } =
         getTableColumns(users);
@@ -72,11 +72,10 @@ export class Auth {
       const [user] = await db
         .select({ id, name, email, matricNo, avatar, isAdmin, softDeleted })
         .from(users)
-        .where(
-          and(eq(users.email, userEmail), eq(users.matricNo, userMatricNo)),
-        );
+        .where(and(eq(users.email, userEmail), eq(users.id, userId)));
 
-      if (!user || user.softDeleted) throw new Unauthorized("Please authenticate!");
+      if (!user || user.softDeleted)
+        throw new Unauthorized("Please authenticate!");
 
       return this.formatUserObject(user);
     } catch (e) {

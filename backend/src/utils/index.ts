@@ -5,11 +5,11 @@ import crypto from "crypto";
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET as string);
 
 export async function generateAuthToken(payload: JWTPayload): Promise<string> {
-  const { email, sessionId, matricNo } = payload;
+  const { email, sessionId, id } = payload;
 
   const token = await new SignJWT({
     email,
-    matricNo,
+    id,
     sessionId,
   })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })

@@ -1,19 +1,15 @@
-import { and, eq, getTableColumns, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db/mysql";
 import { courseRegistrations, courses, users } from "@/db/schema";
 import { BadRequest, InternalServerError, NotFound } from "@/utils/error";
-import type {
-  CheckRegisteredCourses,
-  FindCoursesBySemester,
-  RegisterCourse,
-} from "../types";
+import type { CheckRegisteredCourses, RegisterCourse } from "../types";
 import { logger } from "@/utils/logger";
 
 export class Registration {
   async registerCourse(params: RegisterCourse) {
     try {
       return await db.transaction(async (tx) => {
-        const { userId, courseCode, semester, year } = params;
+        const { userId, courseCode, semester } = params;
 
         const user = await tx.query.users.findFirst({
           where: eq(users.id, userId),
@@ -27,8 +23,8 @@ export class Registration {
           await this.checkNumberOfRegisteredCourses({
             userId,
             semester,
-            year,
           });
+
         if (checkNoOfRegisteredCourses)
           throw new BadRequest(
             "User cannot register more than 12 courses in a semester",
@@ -39,7 +35,6 @@ export class Registration {
             eq(courseRegistrations.userId, userId),
             eq(courseRegistrations.courseId, courseDetails.id),
             eq(courseRegistrations.semester, semester),
-            eq(courseRegistrations.year, year),
           ),
         });
         if (existing)
@@ -49,7 +44,6 @@ export class Registration {
           userId,
           courseId: courseDetails.id,
           semester,
-          year,
         });
 
         return { course: courseDetails.courseCode };
@@ -60,7 +54,7 @@ export class Registration {
       if (e instanceof NotFound) throw e;
       if (this.isDuplicateEntryError(e)) {
         throw new BadRequest(
-          "User already registered for this course in the selected semester and year",
+          "User already registered for this course in the selected semester",
         );
       }
       throw new InternalServerError("Unable to register course");
@@ -84,28 +78,19 @@ export class Registration {
     }
   }
 
-  async findRegisteredCoursesBySemesterOrYear(
-    userId: string,
-    year: number,
-    semester?: number,
-  ) {
+  async findRegisteredCoursesBySemester(userId: string, semester: string) {
     try {
-      if (semester)
-        return this.findRegisteredCoursesBySemester(userId, { semester, year });
-
-      return this.findRegisteredCoursesByYear(userId, year);
+      return this._findRegisteredCoursesBySemester(userId, semester);
     } catch (e) {
       if (e instanceof NotFound) throw e;
       throw new InternalServerError("Error fetching all courses");
     }
   }
 
-  private async findRegisteredCoursesBySemester(
+  private async _findRegisteredCoursesBySemester(
     userId: string,
-    payload: FindCoursesBySemester,
+    semester: string,
   ) {
-    const { semester, year } = payload;
-
     try {
       const allCourses = await db
         .select()
@@ -114,28 +99,6 @@ export class Registration {
           and(
             eq(courseRegistrations.semester, semester),
             eq(courseRegistrations.userId, userId),
-            eq(courseRegistrations.year, year),
-          ),
-        );
-
-      if (!allCourses || allCourses.length === 0)
-        throw new NotFound("No courses found");
-
-      return allCourses;
-    } catch (e) {
-      throw e;
-    }
-  }
-
-  private async findRegisteredCoursesByYear(userId: string, year: number) {
-    try {
-      const allCourses = await db
-        .select()
-        .from(courseRegistrations)
-        .where(
-          and(
-            eq(courseRegistrations.userId, userId),
-            eq(courseRegistrations.year, year),
           ),
         );
 
@@ -149,7 +112,7 @@ export class Registration {
   }
 
   private async checkNumberOfRegisteredCourses(params: CheckRegisteredCourses) {
-    const { userId, semester, year } = params;
+    const { userId, semester } = params;
 
     return await db.transaction(async (tx) => {
       const [total] = await tx
@@ -159,7 +122,6 @@ export class Registration {
           and(
             eq(courseRegistrations.userId, userId),
             eq(courseRegistrations.semester, semester),
-            eq(courseRegistrations.year, year),
           ),
         );
 
@@ -198,11 +160,7 @@ export class Registration {
     }
   }
 
-  async fetchRegisteredUsersForCourse(
-    courseCode: string,
-    semester: number,
-    year: number,
-  ) {
+  async fetchRegisteredUsersForCourse(courseCode: string, semester: string) {
     try {
       const course = await db.query.courses.findFirst({
         where: eq(courses.courseCode, courseCode),
@@ -218,7 +176,6 @@ export class Registration {
           matricNo: users.matricNo,
           email: users.email,
           semester: courseRegistrations.semester,
-          year: courseRegistrations.year,
         })
         .from(courseRegistrations)
         .innerJoin(users, eq(courseRegistrations.userId, users.id))
@@ -226,7 +183,6 @@ export class Registration {
           and(
             eq(courseRegistrations.courseId, course.id),
             eq(courseRegistrations.semester, semester),
-            eq(courseRegistrations.year, year),
           ),
         );
 

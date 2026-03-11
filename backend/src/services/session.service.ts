@@ -23,6 +23,7 @@ export class SessionService {
 
       await db.insert(session).values({
         schoolSession: sessionName,
+        currentSession: sessionName,
       });
 
       logger.info("Session created...");

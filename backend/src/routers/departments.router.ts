@@ -21,17 +21,17 @@ const {
 
 app.post(
   "/departments/create",
-  zodValidator(createDepartmentSchema),
   authentication,
   adminProtectedRoute,
+  zodValidator(createDepartmentSchema),
   createDepartment,
 );
 
 app.put(
   "/departments/update/:departmentId",
-  zodValidator(updateDepartmentSchema),
   authentication,
   adminProtectedRoute,
+  zodValidator(updateDepartmentSchema),
   updateDepartment,
 );
 
