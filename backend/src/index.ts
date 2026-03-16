@@ -9,6 +9,7 @@ import coursesRouter from "@/routers/courses.router";
 import scoresRouter from "@/routers/score.router";
 import registrationsRouter from "@/routers/registration.router";
 import departmentsRouter from "@/routers/departments.router";
+import sessionRouter from "@/routers/session.router";
 import { errorHandler, invalidRoute } from "@/middleware/errorHandler";
 import { bodyLimit } from "hono/body-limit";
 import { limiter } from "@/middleware/hono-rate-limiter";
@@ -56,6 +57,7 @@ app.route("/api/v1", coursesRouter);
 app.route("/api/v1", scoresRouter);
 app.route("/api/v1", registrationsRouter);
 app.route("/api/v1", departmentsRouter);
+app.route("/api/v1", sessionRouter);
 
 app.get("/", (c) =>
   c.json({ message: "Welcome to the Results Processing API" }, 200),

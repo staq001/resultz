@@ -6,7 +6,13 @@ import { addSessionSchema } from "@/schema/session.schema";
 const { authentication, adminProtectedRoute } = new Auth();
 const app = new Hono();
 
-const { createSession, updateSession, setSession } = new SessionController();
+const {
+  createSession,
+  updateSession,
+  setSession,
+  getCurrentSession,
+  getSessions,
+} = new SessionController();
 
 app.post(
   "/sessions/create",
@@ -31,5 +37,14 @@ app.put(
   zodValidator(addSessionSchema),
   setSession,
 );
+
+app.get(
+  "/sessions/current",
+  authentication,
+  adminProtectedRoute,
+  getCurrentSession,
+);
+
+app.get("/sessions", authentication, adminProtectedRoute, getSessions);
 
 export default app;

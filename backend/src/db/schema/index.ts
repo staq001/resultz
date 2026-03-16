@@ -6,4 +6,5 @@ export * from "./otp";
 export * from "./email";
 export * from "./score-courses";
 export * from "./session";
+export * from "./currentSession";
 export * from "./activationToken";

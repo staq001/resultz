@@ -9,6 +9,7 @@ import {
   InternalServerError,
   NotFound,
 } from "../utils/error";
+import { currentSession } from "@/db/schema/currentSession";
 
 export class SessionService {
   async createSession(sessionName: string) {
@@ -23,34 +24,13 @@ export class SessionService {
 
       await db.insert(session).values({
         schoolSession: sessionName,
-        currentSession: sessionName,
       });
 
       logger.info("Session created...");
     } catch (e: any) {
       logger.error(`Error creating session, ${e}`);
       if (e instanceof Conflict) throw e;
-      throw new InternalServerError(`Error creating user`);
-    }
-  }
-
-  async persistSession(sessionName: string) {
-    try {
-      const [schSession] = await db
-        .select()
-        .from(session)
-        .where(eq(session.schoolSession, sessionName));
-
-      if (!schSession) throw new NotFound("Session not found");
-
-      await db
-        .update(session)
-        .set({ currentSession: schSession.schoolSession })
-        .where(eq(session.schoolSession, sessionName));
-    } catch (e) {
-      logger.error(`Error persisting session, ${e}`);
-      if (e instanceof NotFound) throw e;
-      throw new InternalServerError(`Error persisting session`);
+      throw new InternalServerError(`Error creating session`);
     }
   }
 
@@ -75,6 +55,64 @@ export class SessionService {
       if (e instanceof NotFound) throw e;
       if (e instanceof BadRequest) throw e;
       throw new InternalServerError(`Error persisting session`);
+    }
+  }
+
+  async persistSession(sessionName: string) {
+    try {
+      const [schSession] = await db
+        .select()
+        .from(session)
+        .where(eq(session.schoolSession, sessionName));
+
+      if (!schSession) throw new NotFound("Session not found");
+
+      const [currentSchSession] = await db
+        .select()
+        .from(currentSession)
+        .limit(1);
+
+      if (!currentSchSession) {
+        await db.insert(currentSession).values({
+          currentSession: schSession.schoolSession,
+        });
+        return;
+      }
+
+      await db
+        .update(currentSession)
+        .set({ currentSession: schSession.schoolSession })
+        .limit(1);
+    } catch (e) {
+      logger.error(`Error persisting session, ${e}`);
+      if (e instanceof NotFound) throw e;
+      throw new InternalServerError(`Error persisting session`);
+    }
+  }
+
+  async getCurrentSession() {
+    try {
+      const [schSession] = await db.select().from(currentSession);
+      console.log(schSession);
+
+      return schSession?.currentSession;
+    } catch (e) {
+      logger.error(`Error fetching current session, ${e}`);
+      throw new InternalServerError(`Error fetching current session`);
+    }
+  }
+
+  async getAllSessions() {
+    try {
+      const schSessions = await db
+        .select()
+        .from(session)
+        .orderBy(session.schoolSession);
+
+      return schSessions;
+    } catch (e) {
+      logger.error(`Error fetching sessions, ${e}`);
+      throw new InternalServerError(`Error fetching sessions`);
     }
   }
 }
