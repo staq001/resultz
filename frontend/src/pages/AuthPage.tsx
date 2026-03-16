@@ -36,10 +36,12 @@ export function AuthPage({
   return (
     <main className="auth-wrap">
       <form className="panel" onSubmit={onSubmit}>
-        <h2>
-          {authMode === "login" ? "Login to Portal" : "Create Portal Account"}
-        </h2>
-        <p className="sub">Sign in with your backend account credentials.</p>
+        <h2>{authMode === "login" ? "Login to Portal" : "Create Account"}</h2>
+        <p className="sub">
+          {authMode === "login"
+            ? "Log in to your account"
+            : "Create a new account"}
+        </p>
 
         <div className="segmented">
           <button
