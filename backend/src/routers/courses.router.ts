@@ -4,7 +4,8 @@ import { Auth } from "@/middleware/auth";
 import { CourseController } from "@/controllers/courses.controller";
 import { addCourseSchema, updateCourseSchema } from "@/schema/courses.schema";
 
-const { authentication, adminProtectedRoute } = new Auth();
+const { authentication, adminProtectedRoute, adminOrStaffProtectedRoute } =
+  new Auth();
 const app = new Hono();
 
 const {
@@ -48,7 +49,7 @@ app.get(
 app.get(
   "/courses/department/:departmentId",
   authentication,
-  adminProtectedRoute,
+  adminOrStaffProtectedRoute,
   getAllCourses,
 );
 

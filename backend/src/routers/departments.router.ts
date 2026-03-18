@@ -7,7 +7,8 @@ import {
   updateDepartmentSchema,
 } from "@/schema/department.schema";
 
-const { authentication, adminProtectedRoute } = new Auth();
+const { authentication, adminProtectedRoute, adminOrStaffProtectedRoute } =
+  new Auth();
 const app = new Hono();
 
 const {
@@ -49,7 +50,12 @@ app.get(
   getDepartmentByFaculty,
 );
 
-app.get("/departments", authentication, adminProtectedRoute, getAllDepartments);
+app.get(
+  "/departments",
+  authentication,
+  adminOrStaffProtectedRoute,
+  getAllDepartments,
+);
 
 app.delete(
   "/departments/:departmentId",

@@ -93,7 +93,6 @@ export class SessionService {
   async getCurrentSession() {
     try {
       const [schSession] = await db.select().from(currentSession);
-      console.log(schSession);
 
       return schSession?.currentSession;
     } catch (e) {

@@ -51,6 +51,38 @@ export class Auth {
     },
   );
 
+  staffProtectedRoute = createMiddleware<AppEnv>(
+    async (c: Context, next: Next) => {
+      try {
+        const user = c.get("user");
+
+        if (!user || !user.isStaff) {
+          return c.json({ error: "Unauthorized" }, 403);
+        }
+
+        await next();
+      } catch (e: any) {
+        return c.json({ error: e.message || "Forbidden" }, e.status || 403);
+      }
+    },
+  );
+
+  adminOrStaffProtectedRoute = createMiddleware<AppEnv>(
+    async (c: Context, next: Next) => {
+      try {
+        const user = c.get("user") as reqUser & { isStaff?: boolean };
+
+        if (!user || (!user.isAdmin && !user.isStaff)) {
+          return c.json({ error: "Unauthorized" }, 403);
+        }
+
+        await next();
+      } catch (e: any) {
+        return c.json({ error: e.message || "Forbidden" }, e.status || 403);
+      }
+    },
+  );
+
   private async tokenValidator(token: string) {
     const { email, sessionId, id } = await verifyToken(token);
 
@@ -66,11 +98,30 @@ export class Auth {
 
   private async getUser(userEmail: string, userId: string) {
     try {
-      const { id, name, email, matricNo, avatar, isAdmin, softDeleted } =
-        getTableColumns(users);
+      const {
+        id,
+        name,
+        email,
+        matricNo,
+        avatar,
+        isAdmin,
+        softDeleted,
+        isRusticated,
+        isStaff,
+      } = getTableColumns(users);
 
       const [user] = await db
-        .select({ id, name, email, matricNo, avatar, isAdmin, softDeleted })
+        .select({
+          id,
+          name,
+          email,
+          matricNo,
+          avatar,
+          isAdmin,
+          softDeleted,
+          isRusticated,
+          isStaff,
+        })
         .from(users)
         .where(and(eq(users.email, userEmail), eq(users.id, userId)));
 

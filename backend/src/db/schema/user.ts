@@ -22,5 +22,6 @@ export const users = mysqlTable("users", {
   publicId: varchar("avatar_public_id", { length: 255 }),
   softDeleted: boolean("soft_deleted").default(false),
   isVerified: boolean("is_verified").default(false),
+  isRusticated: boolean("is_rusticated").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });

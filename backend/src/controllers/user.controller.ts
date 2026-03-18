@@ -183,6 +183,24 @@ export class UserController {
     }
   };
 
+  rusticateUser = async (c: Context) => {
+    const { id } = c.req.param();
+
+    try {
+      await this.userService.rusticateUser(id as string);
+
+      return c.json(
+        { status: 200, message: "User rusticated successfully" },
+        200,
+      );
+    } catch (e: any) {
+      return c.json(
+        { message: e.message || "Internal Server Error" },
+        e.status || 500,
+      );
+    }
+  };
+
   updateUserPassword = async (c: UpdatePasswordContext) => {
     const { password } = c.req.valid("json");
     const { id } = c.get("user");

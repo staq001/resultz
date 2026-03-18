@@ -69,8 +69,8 @@ export class UserService implements US {
 
   async login(payload: loginOptions) {
     try {
-      const { email, password } = payload;
-      const user = await validateCredentials(email, password);
+      const { email, matricNo, password } = payload;
+      const user = await validateCredentials({ email, matricNo }, password);
 
       const sessionId = randomUUID();
       const token = await generateAuthToken({
@@ -156,6 +156,23 @@ export class UserService implements US {
       logger.error(`Error deleting user...`);
       if (e instanceof NotFound) throw e;
       throw new InternalServerError(`Error deleting user`);
+    }
+  }
+
+  async rusticateUser(id: string) {
+    try {
+      const [result] = await db
+        .update(users)
+        .set({ isRusticated: true })
+        .where(eq(users.id, id));
+      if (!result) throw new NotFound(`User doesn't exist`);
+
+      logger.info("User successfully rusticated");
+      return result;
+    } catch (e) {
+      logger.error(`Error rusticating user...${e}`);
+      if (e instanceof NotFound) throw e;
+      throw new InternalServerError(`Error rusticating user`);
     }
   }
 

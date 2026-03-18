@@ -3,7 +3,8 @@ import { zodValidator } from "@/middleware/errorHandler";
 import { Auth } from "@/middleware/auth";
 import { SessionController } from "@/controllers/session.controller";
 import { addSessionSchema } from "@/schema/session.schema";
-const { authentication, adminProtectedRoute } = new Auth();
+const { authentication, adminProtectedRoute, adminOrStaffProtectedRoute } =
+  new Auth();
 const app = new Hono();
 
 const {
@@ -41,7 +42,7 @@ app.put(
 app.get(
   "/sessions/current",
   authentication,
-  adminProtectedRoute,
+  adminOrStaffProtectedRoute,
   getCurrentSession,
 );
 

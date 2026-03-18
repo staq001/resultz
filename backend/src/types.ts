@@ -123,7 +123,8 @@ export type NewUser = typeof users.$inferInsert;
 export type NewOtp = typeof otps.$inferInsert;
 
 export type loginOptions = {
-  email: string;
+  email?: string;
+  matricNo?: string;
   password: string;
 };
 

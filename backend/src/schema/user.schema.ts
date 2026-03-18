@@ -10,10 +10,16 @@ export const signupSchema = z.object({
     .optional(),
 });
 
-export const loginSchema = z.object({
-  email: z.email("Invalid email address"),
-  password: z.string().min(1, "Password must be at least 8 characters"),
-});
+export const loginSchema = z
+  .object({
+    email: z.email("Invalid email address").optional(),
+    matricNo: z.string().min(1, "Matric number is required").optional(),
+    password: z.string().min(1, "Password is required"),
+  })
+  .refine((value) => Boolean(value.email || value.matricNo), {
+    message: "Provide email or matric number to log in",
+    path: ["email"],
+  });
 
 export const updateSchema = z.object({
   name: z.string().min(1, "Full name is required"),
