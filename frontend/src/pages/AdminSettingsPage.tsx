@@ -2,16 +2,18 @@ import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useToast } from "../components/ToastProvider";
 
 type AdminSettingsPageProps = {
+  title?: string;
   userName: string;
   userEmail: string;
   avatarUrl?: string | null;
   onUpdateName: (name: string) => Promise<void>;
   onUpdatePassword: (password: string) => Promise<void>;
   onUploadAvatar: (file: File) => Promise<void>;
-  onBack: () => void;
+  onBack?: () => void;
 };
 
 export function AdminSettingsPage({
+  title = "Admin Settings",
   userName,
   userEmail,
   avatarUrl,
@@ -142,12 +144,14 @@ export function AdminSettingsPage({
   return (
     <main className="dashboard-wrap">
       <section className="dashboard-head">
-        <h2>Admin Settings</h2>
-        <div className="admin-head-actions">
-          <button type="button" className="secondary" onClick={onBack}>
-            Back to Admin Home
-          </button>
-        </div>
+        <h2>{title}</h2>
+        {onBack && (
+          <div className="admin-head-actions">
+            <button type="button" className="secondary" onClick={onBack}>
+              Back to Admin Home
+            </button>
+          </div>
+        )}
       </section>
 
       <section className="panel settings-inline-panel">

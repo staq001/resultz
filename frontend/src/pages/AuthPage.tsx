@@ -33,6 +33,10 @@ export function AuthPage({
   onSetPassword,
   onSubmit,
 }: AuthPageProps) {
+  const isStudentLogin = authMode === "login" && role === "student";
+  const isEmailLogin =
+    authMode === "login" && (role === "admin" || role === "staff");
+
   return (
     <main className="auth-wrap">
       <form className="panel" onSubmit={onSubmit}>
@@ -69,6 +73,7 @@ export function AuthPage({
             >
               <option value="student">Student</option>
               <option value="admin">Admin</option>
+              <option value="staff">Staff</option>
             </select>
           </label>
         )}
@@ -108,16 +113,30 @@ export function AuthPage({
           </>
         )}
 
-        <label>
-          Email
-          <input
-            type="email"
-            placeholder="name@school.edu"
-            value={email}
-            onChange={(event) => onSetEmail(event.target.value)}
-            required
-          />
-        </label>
+        {(authMode === "signup" || isEmailLogin) && (
+          <label>
+            Email
+            <input
+              type="email"
+              placeholder="name@school.edu"
+              value={email}
+              onChange={(event) => onSetEmail(event.target.value)}
+              required
+            />
+          </label>
+        )}
+
+        {isStudentLogin && (
+          <label>
+            Matric Number
+            <input
+              placeholder="e.g. FCP/CSC/24/0001"
+              value={matricNo}
+              onChange={(event) => onSetMatricNo(event.target.value)}
+              required
+            />
+          </label>
+        )}
 
         <label>
           Password

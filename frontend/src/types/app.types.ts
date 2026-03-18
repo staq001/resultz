@@ -1,8 +1,8 @@
 import type { ComponentProps } from "react";
 
-export type Page = "landing" | "auth" | "student" | "admin";
+export type Page = "landing" | "auth" | "student" | "admin" | "staff";
 
-export type Role = "student" | "admin";
+export type Role = "student" | "admin" | "staff";
 
 export type AuthMode = "login" | "signup";
 
@@ -18,6 +18,8 @@ export type StudentSection =
   | "registration"
   | "results"
   | "settings";
+
+export type StaffSection = "overview" | "grading" | "settings";
 
 export type SidebarNavItem = {
   label: string;
@@ -56,6 +58,7 @@ export type AuthUserProfile = {
   matricNo: string;
   avatar?: string | null;
   isAdmin: boolean;
+  isStaff: boolean;
 };
 
 export type FormSubmitHandler = NonNullable<ComponentProps<"form">["onSubmit"]>;

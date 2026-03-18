@@ -26,9 +26,19 @@ type ProfileResponse = {
 
 export async function loginUser(
   apiBaseUrl: string,
-  email: string,
-  password: string,
+  incomingPayload: {
+    password: string;
+    email?: string;
+    matricNo?: string;
+  },
 ): Promise<{ token: string }> {
+  const email = incomingPayload.email?.trim();
+  const matricNo = incomingPayload.matricNo?.trim();
+
+  if (!email && !matricNo) {
+    throw new Error("Provide email or matric number to log in.");
+  }
+
   const response = await fetch(`${apiBaseUrl}/users/login`, {
     method: "POST",
     cache: "no-store",
@@ -37,8 +47,9 @@ export async function loginUser(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      email: email.trim(),
-      password,
+      ...(email ? { email } : {}),
+      ...(matricNo ? { matricNo } : {}),
+      password: incomingPayload.password,
     }),
   });
 

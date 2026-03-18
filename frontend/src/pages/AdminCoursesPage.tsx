@@ -7,16 +7,20 @@ import type {
 import { useToast } from "../components/ToastProvider";
 
 type AdminCoursesPageProps = {
+  title?: string;
+  backButtonLabel?: string;
   departments: string[];
   courses: Course[];
   newCourse: NewCourseForm;
   onSetNewCourse: (value: NewCourseForm) => void;
   onCreateCourse: (value: NewCourseForm) => Promise<void>;
   onUpdateCourse: (value: NewCourseForm) => Promise<void>;
-  onBack: () => void;
+  onBack?: () => void;
 };
 
 export function AdminCoursesPage({
+  title = "Courses",
+  backButtonLabel = "Back to Admin Home",
   departments,
   courses,
   newCourse,
@@ -126,12 +130,14 @@ export function AdminCoursesPage({
   return (
     <main className="dashboard-wrap">
       <section className="dashboard-head">
-        <h2>Courses</h2>
-        <div className="admin-head-actions">
-          <button type="button" className="secondary" onClick={onBack}>
-            Back to Admin Home
-          </button>
-        </div>
+        <h2>{title}</h2>
+        {onBack && (
+          <div className="admin-head-actions">
+            <button type="button" className="secondary" onClick={onBack}>
+              {backButtonLabel}
+            </button>
+          </div>
+        )}
       </section>
 
       <section className="grid-3">

@@ -29,15 +29,15 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         <article>
           <h3>Results Analytics</h3>
           <p>
-            Get mock GPA/CGPA calculations with semester breakdowns out of the
-            box.
+            Track GPA/CGPA calculations with clear semester-by-semester
+            breakdowns.
           </p>
         </article>
         <article>
-          <h3>AI Recommendations</h3>
+          <h3>Transcript Services</h3>
           <p>
-            Get smart course load and study-priority suggestions based on your
-            current results and target GPA.
+            Access semester-by-semester transcript records, generate official
+            summaries, and track verification status in one place.
           </p>
         </article>
       </section>
