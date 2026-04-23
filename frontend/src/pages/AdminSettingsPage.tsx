@@ -3,6 +3,7 @@ import { useToast } from "../components/ToastProvider";
 
 type AdminSettingsPageProps = {
   title?: string;
+  backButtonLabel?: string;
   userName: string;
   userEmail: string;
   avatarUrl?: string | null;
@@ -14,6 +15,7 @@ type AdminSettingsPageProps = {
 
 export function AdminSettingsPage({
   title = "Admin Settings",
+  backButtonLabel = "Back to Admin Home",
   userName,
   userEmail,
   avatarUrl,
@@ -148,7 +150,7 @@ export function AdminSettingsPage({
         {onBack && (
           <div className="admin-head-actions">
             <button type="button" className="secondary" onClick={onBack}>
-              Back to Admin Home
+              {backButtonLabel}
             </button>
           </div>
         )}

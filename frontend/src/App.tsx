@@ -39,18 +39,30 @@ import {
   setSemester as setSemesterApi,
   updateSemester as updateSemesterApi,
 } from "./services/semester.api";
+import {
+  createCourseScore,
+  fetchRegisteredUsersForCourse as fetchRegisteredUsersForCourseApi,
+  updateCourseScore,
+} from "./services/grading.api";
 import { AuthPage } from "./pages/AuthPage";
 import { LandingPage } from "./pages/LandingPage";
 import { AdminPortalContent } from "./components/AdminPortalContent";
+import { StaffPortalContent } from "./components/StaffPortalContent";
 import { StudentPortalContent } from "./components/StudentPortalContent";
 import {
   getAdminPath,
   getAdminSectionFromPath,
+  getStaffPath,
+  getStaffSectionFromPath,
   getStudentPath,
   getStudentSectionFromPath,
   LOGIN_PATH,
 } from "./utils/portal-routing";
-import { buildAdminNavItems, buildStudentNavItems } from "./utils/portal-nav";
+import {
+  buildAdminNavItems,
+  buildStaffNavItems,
+  buildStudentNavItems,
+} from "./utils/portal-nav";
 import { useAcademicData } from "./hooks/useAcademicData";
 import type {
   AuthMode,
@@ -58,6 +70,7 @@ import type {
   FormSubmitHandler,
   Page,
   Role,
+  StaffSection,
   StudentSection,
   AdminSection,
 } from "./types/app.types";
@@ -69,6 +82,7 @@ function App() {
 
   const [page, setPage] = useState<Page>("landing");
   const [adminSection, setAdminSection] = useState<AdminSection>("overview");
+  const [staffSection, setStaffSection] = useState<StaffSection>("overview");
   const [studentSection, setStudentSection] =
     useState<StudentSection>("overview");
   const [role, setRole] = useState<Role>("student");
@@ -180,18 +194,27 @@ function App() {
     syncCoursesWithDepartments(allDepartments, allCourses);
   };
 
-  const loadAdminSemesterData = async () => {
+  const loadAdminSemesterData = async (portalRole: "admin" | "staff") => {
     const storedSession = loadAuthSession();
     if (!storedSession?.token) return;
 
     setIsLoadingSemesterData(true);
     try {
-      const [sessions, current] = await Promise.all([
-        fetchSemestersApi(apiBaseUrl, storedSession.token),
-        fetchCurrentSemesterApi(apiBaseUrl, storedSession.token),
-      ]);
+      const current = await fetchCurrentSemesterApi(
+        apiBaseUrl,
+        storedSession.token,
+      );
 
-      setManagedSemesters(sessions);
+      if (portalRole === "admin") {
+        const sessions = await fetchSemestersApi(
+          apiBaseUrl,
+          storedSession.token,
+        );
+        setManagedSemesters(sessions);
+      } else {
+        setManagedSemesters([]);
+      }
+
       setCurrentSemester(current?.trim() ? current : "Not set");
     } finally {
       setIsLoadingSemesterData(false);
@@ -222,6 +245,18 @@ function App() {
       }
       setPage("student");
       setStudentSection(getStudentSectionFromPath(pathname));
+      return;
+    }
+
+    if (pathname.startsWith("/staff")) {
+      if (!hasSession) {
+        window.history.replaceState({}, "", LOGIN_PATH);
+        setPage("auth");
+        setAuthMode("login");
+        return;
+      }
+      setPage("staff");
+      setStaffSection(getStaffSectionFromPath(pathname));
       return;
     }
 
@@ -262,6 +297,12 @@ function App() {
     navigateTo(getStudentPath(section));
   };
 
+  const goToStaffSection = (section: StaffSection) => {
+    setStaffSection(section);
+    setRole("staff");
+    navigateTo(getStaffPath(section));
+  };
+
   const handleAuthSubmit: FormSubmitHandler = async (event) => {
     event.preventDefault();
 
@@ -283,7 +324,12 @@ function App() {
         return;
       }
 
-      const { token } = await loginUser(apiBaseUrl, authEmail, authPassword);
+      const loginPayload =
+        role === "student"
+          ? { matricNo: authMatricNo, password: authPassword }
+          : { email: authEmail, password: authPassword };
+
+      const { token } = await loginUser(apiBaseUrl, loginPayload);
       const profileUser = await fetchUserProfile(apiBaseUrl, token);
 
       setCurrentUser(profileUser);
@@ -295,11 +341,19 @@ function App() {
         return;
       }
 
-      const targetRole: Role = role === "admin" ? "admin" : "student";
+      if (role === "staff" && !profileUser.isStaff) {
+        toast.error("This account is not a staff account.");
+        return;
+      }
+
+      const targetRole: Role =
+        role === "admin" ? "admin" : role === "staff" ? "staff" : "student";
       saveAuthSession(token, profileUser, targetRole);
 
       if (targetRole === "admin") {
         goToAdminSection(getAdminSectionFromPath(window.location.pathname));
+      } else if (targetRole === "staff") {
+        goToStaffSection(getStaffSectionFromPath(window.location.pathname));
       } else {
         goToStudentSection(getStudentSectionFromPath(window.location.pathname));
       }
@@ -346,7 +400,9 @@ function App() {
         const nextRole: Role =
           storedSession.role === "admin" && profileUser.isAdmin
             ? "admin"
-            : "student";
+            : storedSession.role === "staff" && profileUser.isStaff
+              ? "staff"
+              : "student";
 
         saveAuthSession(storedSession.token, profileUser, nextRole);
         setCurrentUser(profileUser);
@@ -356,12 +412,16 @@ function App() {
 
         if (window.location.pathname.startsWith("/admin")) {
           goToAdminSection(getAdminSectionFromPath(window.location.pathname));
+        } else if (window.location.pathname.startsWith("/staff")) {
+          goToStaffSection(getStaffSectionFromPath(window.location.pathname));
         } else if (window.location.pathname.startsWith("/student")) {
           goToStudentSection(
             getStudentSectionFromPath(window.location.pathname),
           );
         } else if (nextRole === "admin") {
           goToAdminSection("overview");
+        } else if (nextRole === "staff") {
+          goToStaffSection("overview");
         } else {
           goToStudentSection("overview");
         }
@@ -387,19 +447,22 @@ function App() {
   }, [apiBaseUrl]);
 
   useEffect(() => {
-    const shouldLoadAdminData =
-      page === "admin" && (currentUser?.isAdmin || role === "admin");
-    if (!shouldLoadAdminData) return;
+    const shouldLoadPortalData =
+      (page === "admin" && (currentUser?.isAdmin || role === "admin")) ||
+      (page === "staff" && (currentUser?.isStaff || role === "staff"));
+    if (!shouldLoadPortalData) return;
+
+    const portalRole = page === "admin" ? "admin" : "staff";
 
     void Promise.all([
       loadAdminDepartmentsAndCourses(),
-      loadAdminSemesterData(),
+      loadAdminSemesterData(portalRole),
     ]).catch((error) => {
       const message =
         error instanceof Error ? error.message : "Failed to load admin data.";
       toast.error(message);
     });
-  }, [page, currentUser?.isAdmin, role, toast]);
+  }, [page, currentUser?.isAdmin, currentUser?.isStaff, role, toast]);
 
   const signOut = async () => {
     const storedSession = loadAuthSession();
@@ -417,6 +480,7 @@ function App() {
       setAuthMode("login");
       setRole("student");
       setAdminSection("overview");
+      setStaffSection("overview");
       setStudentSection("overview");
       setCurrentUser(null);
       setUserName("");
@@ -441,7 +505,11 @@ function App() {
     );
 
     const activeRole: Role =
-      role === "admin" && refreshedUser.isAdmin ? "admin" : "student";
+      role === "admin" && refreshedUser.isAdmin
+        ? "admin"
+        : role === "staff" && refreshedUser.isStaff
+          ? "staff"
+          : "student";
     saveAuthSession(storedSession.token, refreshedUser, activeRole);
     setCurrentUser(refreshedUser);
     setUserName(refreshedUser.name);
@@ -553,6 +621,52 @@ function App() {
     await loadAdminDepartmentsAndCourses();
   };
 
+  const handleFetchRegisteredUsersForCourse = async (
+    courseCode: string,
+    semester: string,
+  ) => {
+    const storedSession = loadAuthSession();
+    if (!storedSession?.token) throw new Error("Please login again.");
+
+    return fetchRegisteredUsersForCourseApi(
+      apiBaseUrl,
+      storedSession.token,
+      courseCode,
+      semester,
+    );
+  };
+
+  const handleSaveStaffScore = async (params: {
+    registrationId: string;
+    scoreId?: string;
+    testScore: number;
+    examScore: number;
+  }): Promise<{ nextScoreId?: string }> => {
+    const storedSession = loadAuthSession();
+    if (!storedSession?.token) throw new Error("Please login again.");
+
+    if (params.scoreId) {
+      await updateCourseScore(
+        apiBaseUrl,
+        storedSession.token,
+        params.scoreId,
+        params.testScore,
+        params.examScore,
+      );
+      return { nextScoreId: params.scoreId };
+    }
+
+    const createdScoreId = await createCourseScore(
+      apiBaseUrl,
+      storedSession.token,
+      params.registrationId,
+      params.testScore,
+      params.examScore,
+    );
+
+    return { nextScoreId: createdScoreId };
+  };
+
   const handleUpdateUserPassword = async (password: string) => {
     const storedSession = loadAuthSession();
     if (!storedSession?.token) throw new Error("Please login again.");
@@ -568,7 +682,7 @@ function App() {
     if (!storedSession?.token) throw new Error("Please login again.");
 
     await createSemesterApi(apiBaseUrl, storedSession.token, trimmedSemester);
-    await loadAdminSemesterData();
+    await loadAdminSemesterData("admin");
   };
 
   const handleSetSemester = async (semesterName: string) => {
@@ -579,7 +693,7 @@ function App() {
     if (!storedSession?.token) throw new Error("Please login again.");
 
     await setSemesterApi(apiBaseUrl, storedSession.token, trimmedSemester);
-    await loadAdminSemesterData();
+    await loadAdminSemesterData("admin");
   };
 
   const handleUpdateSemester = async (
@@ -596,7 +710,7 @@ function App() {
     if (!storedSession?.token) throw new Error("Please login again.");
 
     await updateSemesterApi(apiBaseUrl, storedSession.token, fromName, toName);
-    await loadAdminSemesterData();
+    await loadAdminSemesterData("admin");
   };
 
   const handleUploadAvatar = async (file: File) => {
@@ -610,7 +724,11 @@ function App() {
     );
 
     const activeRole: Role =
-      role === "admin" && refreshedUser.isAdmin ? "admin" : "student";
+      role === "admin" && refreshedUser.isAdmin
+        ? "admin"
+        : role === "staff" && refreshedUser.isStaff
+          ? "staff"
+          : "student";
     saveAuthSession(storedSession.token, refreshedUser, activeRole);
     setCurrentUser(refreshedUser);
     setUserName(refreshedUser.name);
@@ -618,6 +736,7 @@ function App() {
   };
 
   const adminNavItems = buildAdminNavItems(adminSection, goToAdminSection);
+  const staffNavItems = buildStaffNavItems(staffSection, goToStaffSection);
   const studentNavItems = buildStudentNavItems(
     studentSection,
     goToStudentSection,
@@ -742,6 +861,31 @@ function App() {
             onGoToSection={goToStudentSection}
             onToggleCourseRegistration={toggleCourseRegistration}
             onChangeSemester={setActiveSemester}
+          />
+        </PortalShell>
+      )}
+
+      {page === "staff" && (
+        <PortalShell
+          userName={currentUser?.name ?? userName}
+          avatarUrl={currentUser?.avatar ?? null}
+          navItems={staffNavItems}
+          onSignOut={signOut}
+        >
+          <StaffPortalContent
+            staffSection={staffSection}
+            departments={departments}
+            courses={courses}
+            currentSemester={currentSemester}
+            userName={userName}
+            userEmail={userEmail}
+            avatarUrl={currentUser?.avatar ?? null}
+            onGoToSection={goToStaffSection}
+            onFetchRegisteredUsers={handleFetchRegisteredUsersForCourse}
+            onSaveScore={handleSaveStaffScore}
+            onUpdateName={handleUpdateUserName}
+            onUpdatePassword={handleUpdateUserPassword}
+            onUploadAvatar={handleUploadAvatar}
           />
         </PortalShell>
       )}
