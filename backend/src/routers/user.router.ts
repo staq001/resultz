@@ -9,7 +9,7 @@ import {
 import { zodValidator } from "@/middleware/errorHandler";
 import { Auth } from "@/middleware/auth";
 
-const { authentication } = new Auth();
+const { authentication, adminProtectedRoute } = new Auth();
 const app = new Hono();
 
 const userController = new UserController();
@@ -43,6 +43,13 @@ app.post("/users/otp/create/:userId", userController.createOtp);
 app.post("/users/otp/verify/:userId", userController.verifyOtp);
 
 app.get("/users/profile", authentication, userController.getUser);
+
+app.patch(
+  "/users/rusticate/:id",
+  authentication,
+  adminProtectedRoute,
+  userController.rusticateUser,
+);
 
 app.patch(
   "/users/update/name",

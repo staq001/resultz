@@ -8,6 +8,7 @@ export const signupSchema = z.object({
     .string()
     .min(10, "Matric No must be at least 8 characters")
     .optional(),
+  department: z.string().min(2, "Department is required").optional(),
 });
 
 export const loginSchema = z

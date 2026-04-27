@@ -300,13 +300,13 @@ export class UserService implements US {
   }
 
   private async getUserById(userId: string) {
-    const { id, name, matricNo, email, avatar, publicId } =
-      getTableColumns(users);
+      const { id, name, matricNo, department, email, avatar, publicId } =
+        getTableColumns(users);
 
-    const [user] = await db
-      .select({ id, name, matricNo, email, avatar, publicId })
-      .from(users)
-      .where(eq(users.id, userId));
+      const [user] = await db
+        .select({ id, name, matricNo, department, email, avatar, publicId })
+        .from(users)
+        .where(eq(users.id, userId));
 
     if (!user) throw new NotFound("User not found");
     return user;
@@ -314,11 +314,29 @@ export class UserService implements US {
 
   async getUserByEmail(emailAddress: string) {
     try {
-      const { id, name, matricNo, email, avatar, publicId, isVerified } =
+      const {
+        id,
+        name,
+        matricNo,
+        department,
+        email,
+        avatar,
+        publicId,
+        isVerified,
+      } =
         getTableColumns(users);
 
       const [user] = await db
-        .select({ id, name, matricNo, email, avatar, publicId, isVerified })
+        .select({
+          id,
+          name,
+          matricNo,
+          department,
+          email,
+          avatar,
+          publicId,
+          isVerified,
+        })
         .from(users)
         .where(eq(users.email, emailAddress));
 

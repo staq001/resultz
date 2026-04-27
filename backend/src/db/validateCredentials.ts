@@ -13,7 +13,16 @@ export async function validateCredentials(
   inputPassword: string,
 ) {
   try {
-    const { id, name, email, softDeleted, isVerified, password, matricNo } =
+    const {
+      id,
+      name,
+      email,
+      softDeleted,
+      isVerified,
+      password,
+      matricNo,
+      department,
+    } =
       getTableColumns(users);
 
     const normalizedEmail = inputIdentifier.email?.trim();
@@ -25,8 +34,17 @@ export async function validateCredentials(
     }
 
     const [user] = await db
-      .select({ id, name, email, softDeleted, isVerified, password, matricNo })
-      .from(users)
+        .select({
+          id,
+          name,
+          email,
+          softDeleted,
+          isVerified,
+          password,
+          matricNo,
+          department,
+        })
+        .from(users)
       .where(
         or(
           normalizedEmail ? eq(users.email, normalizedEmail) : undefined,

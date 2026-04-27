@@ -39,12 +39,7 @@ app.put(
   setSession,
 );
 
-app.get(
-  "/sessions/current",
-  authentication,
-  adminOrStaffProtectedRoute,
-  getCurrentSession,
-);
+app.get("/sessions/current", authentication, getCurrentSession);
 
 app.get("/sessions", authentication, adminProtectedRoute, getSessions);
 
