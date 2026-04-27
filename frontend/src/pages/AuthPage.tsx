@@ -5,6 +5,7 @@ type AuthPageProps = {
   role: Role;
   userName: string;
   matricNo: string;
+  department: string;
   email: string;
   password: string;
   isSubmitting: boolean;
@@ -12,6 +13,7 @@ type AuthPageProps = {
   onSetRole: (role: Role) => void;
   onSetUserName: (name: string) => void;
   onSetMatricNo: (matricNo: string) => void;
+  onSetDepartment: (department: string) => void;
   onSetEmail: (email: string) => void;
   onSetPassword: (password: string) => void;
   onSubmit: FormSubmitHandler;
@@ -22,6 +24,7 @@ export function AuthPage({
   role,
   userName,
   matricNo,
+  department,
   email,
   password,
   isSubmitting,
@@ -29,6 +32,7 @@ export function AuthPage({
   onSetRole,
   onSetUserName,
   onSetMatricNo,
+  onSetDepartment,
   onSetEmail,
   onSetPassword,
   onSubmit,
@@ -100,15 +104,26 @@ export function AuthPage({
               />
             </label>
             {role === "student" && (
-              <label>
-                Matric Number
-                <input
-                  placeholder="e.g. FCP/CSC/24/0001"
-                  value={matricNo}
-                  onChange={(event) => onSetMatricNo(event.target.value)}
-                  required
-                />
-              </label>
+              <>
+                <label>
+                  Department
+                  <input
+                    placeholder="e.g. Computer Science or CSC"
+                    value={department}
+                    onChange={(event) => onSetDepartment(event.target.value)}
+                    required
+                  />
+                </label>
+                <label>
+                  Matric Number
+                  <input
+                    placeholder="e.g. FCP/CSC/24/0001"
+                    value={matricNo}
+                    onChange={(event) => onSetMatricNo(event.target.value)}
+                    required
+                  />
+                </label>
+              </>
             )}
           </>
         )}

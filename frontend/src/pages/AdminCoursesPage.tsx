@@ -40,6 +40,8 @@ export function AdminCoursesPage({
     title: courses[0]?.title ?? "",
     unit: courses[0]?.unit ?? 3,
     department: courses[0]?.department ?? departments[0] ?? "",
+    semester: courses[0]?.semester ?? "Rain",
+    level: courses[0]?.level ?? 100,
   });
 
   useEffect(() => {
@@ -60,6 +62,8 @@ export function AdminCoursesPage({
         title: "",
         unit: 3,
         department: departments[0] ?? "",
+        semester: "Rain",
+        level: 100,
       });
       return;
     }
@@ -71,6 +75,8 @@ export function AdminCoursesPage({
         title: firstCourse.title,
         unit: firstCourse.unit,
         department: firstCourse.department,
+        semester: firstCourse.semester,
+        level: firstCourse.level,
       });
     }
   }, [courses, courseUpdate.code, departments]);
@@ -193,6 +199,37 @@ export function AdminCoursesPage({
               ))}
             </select>
           </label>
+          <label>
+            Semester
+            <select
+              value={newCourse.semester}
+              onChange={(event) =>
+                onSetNewCourse({
+                  ...newCourse,
+                  semester: event.target.value as "Rain" | "Harmattan",
+                })
+              }
+            >
+              <option value="Rain">Rain</option>
+              <option value="Harmattan">Harmattan</option>
+            </select>
+          </label>
+          <label>
+            Level
+            <input
+              type="number"
+              min={100}
+              max={600}
+              step={100}
+              value={newCourse.level}
+              onChange={(event) =>
+                onSetNewCourse({
+                  ...newCourse,
+                  level: Number(event.target.value) || 100,
+                })
+              }
+            />
+          </label>
           <button type="submit" className="primary stretch">
             Add Course
           </button>
@@ -215,6 +252,8 @@ export function AdminCoursesPage({
                   title: selected.title,
                   unit: selected.unit,
                   department: selected.department,
+                  semester: selected.semester,
+                  level: selected.level,
                 });
               }}
             >
@@ -267,6 +306,37 @@ export function AdminCoursesPage({
               ))}
             </select>
           </label>
+          <label>
+            Semester
+            <select
+              value={courseUpdate.semester}
+              onChange={(event) =>
+                setCourseUpdate({
+                  ...courseUpdate,
+                  semester: event.target.value as "Rain" | "Harmattan",
+                })
+              }
+            >
+              <option value="Rain">Rain</option>
+              <option value="Harmattan">Harmattan</option>
+            </select>
+          </label>
+          <label>
+            Level
+            <input
+              type="number"
+              min={100}
+              max={600}
+              step={100}
+              value={courseUpdate.level}
+              onChange={(event) =>
+                setCourseUpdate({
+                  ...courseUpdate,
+                  level: Number(event.target.value) || 100,
+                })
+              }
+            />
+          </label>
           <button type="submit" className="primary stretch">
             Save Course Update
           </button>
@@ -295,6 +365,12 @@ export function AdminCoursesPage({
               </li>
               <li>
                 <strong>Department:</strong> {fetchedCourse.department}
+              </li>
+              <li>
+                <strong>Semester:</strong> {fetchedCourse.semester}
+              </li>
+              <li>
+                <strong>Level:</strong> {fetchedCourse.level}
               </li>
             </ul>
           )}
@@ -337,6 +413,8 @@ export function AdminCoursesPage({
                   <th>Title</th>
                   <th>Unit</th>
                   <th>Department</th>
+                  <th>Semester</th>
+                  <th>Level</th>
                 </tr>
               </thead>
               <tbody>
@@ -346,6 +424,8 @@ export function AdminCoursesPage({
                     <td>{course.title}</td>
                     <td>{course.unit}</td>
                     <td>{course.department}</td>
+                    <td>{course.semester}</td>
+                    <td>{course.level}</td>
                   </tr>
                 ))}
               </tbody>

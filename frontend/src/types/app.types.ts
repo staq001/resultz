@@ -29,10 +29,13 @@ export type SidebarNavItem = {
 };
 
 export type Course = {
+  id?: string;
   code: string;
   title: string;
   unit: number;
   department: string;
+  semester: "Rain" | "Harmattan";
+  level: number;
 };
 
 export type StudentResult = {
@@ -49,13 +52,16 @@ export type NewCourseForm = {
   title: string;
   unit: number;
   department: string;
+  semester: "Rain" | "Harmattan";
+  level: number;
 };
 
 export type AuthUserProfile = {
   id: string;
   name: string;
   email: string;
-  matricNo: string;
+  matricNo?: string | null;
+  department?: string | null;
   avatar?: string | null;
   isAdmin: boolean;
   isStaff: boolean;

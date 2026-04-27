@@ -75,6 +75,7 @@ export async function signupUser(
     email: string;
     password: string;
     matricNo?: string;
+    department?: string;
   },
 ): Promise<void> {
   const response = await fetch(`${apiBaseUrl}/users/signup`, {
@@ -89,6 +90,9 @@ export async function signupUser(
       email: payload.email.trim(),
       password: payload.password,
       ...(payload.matricNo ? { matricNo: payload.matricNo.trim() } : {}),
+      ...(payload.department
+        ? { department: payload.department.trim() }
+        : {}),
     }),
   });
 

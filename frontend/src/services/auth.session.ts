@@ -22,7 +22,12 @@ function isValidUserProfile(user: unknown): user is AuthUserProfile {
     typeof candidate.id === "string" &&
     typeof candidate.name === "string" &&
     typeof candidate.email === "string" &&
-    typeof candidate.matricNo === "string" &&
+    (typeof candidate.matricNo === "string" ||
+      typeof candidate.matricNo === "undefined" ||
+      candidate.matricNo === null) &&
+    (typeof candidate.department === "string" ||
+      typeof candidate.department === "undefined" ||
+      candidate.department === null) &&
     typeof candidate.isAdmin === "boolean" &&
     typeof candidate.isStaff === "boolean"
   );
