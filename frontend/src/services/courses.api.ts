@@ -4,6 +4,8 @@ export type CourseRecord = {
   courseCode: string;
   departmentId: string;
   units: number;
+  semester: "Rain" | "Harmattan";
+  level: number;
 };
 
 type CoursesEnvelope = {
@@ -29,9 +31,21 @@ export async function fetchCoursesByDepartment(
   apiBaseUrl: string,
   token: string,
   departmentId: string,
+  options?: {
+    semester?: "Rain" | "Harmattan";
+    level?: number;
+  },
 ): Promise<CourseRecord[]> {
+  const params = new URLSearchParams({ limit: "100", page: "1" });
+  if (options?.semester) {
+    params.set("semester", options.semester);
+  }
+  if (typeof options?.level === "number" && !Number.isNaN(options.level)) {
+    params.set("level", String(options.level));
+  }
+
   const response = await fetch(
-    `${apiBaseUrl}/courses/department/${departmentId}?limit=100&page=1`,
+    `${apiBaseUrl}/courses/department/${departmentId}?${params.toString()}`,
     {
       cache: "no-store",
       referrerPolicy: "no-referrer",
@@ -53,7 +67,13 @@ export async function createCourse(
   apiBaseUrl: string,
   token: string,
   departmentId: string,
-  payload: { courseCode: string; title: string; units: number },
+  payload: {
+    courseCode: string;
+    title: string;
+    units: number;
+    semester: "Rain" | "Harmattan";
+    level: number;
+  },
 ): Promise<void> {
   const response = await fetch(`${apiBaseUrl}/courses/create/${departmentId}`, {
     method: "POST",
@@ -67,6 +87,8 @@ export async function createCourse(
       courseCode: payload.courseCode.trim().toUpperCase(),
       title: payload.title.trim(),
       units: payload.units,
+      semester: payload.semester,
+      level: payload.level,
     }),
   });
 
@@ -80,7 +102,13 @@ export async function updateCourse(
   apiBaseUrl: string,
   token: string,
   courseId: string,
-  payload: { courseCode: string; title: string; units: number },
+  payload: {
+    courseCode: string;
+    title: string;
+    units: number;
+    semester: "Rain" | "Harmattan";
+    level: number;
+  },
 ): Promise<void> {
   const response = await fetch(`${apiBaseUrl}/courses/update/${courseId}`, {
     method: "PATCH",
@@ -94,6 +122,8 @@ export async function updateCourse(
       courseCode: payload.courseCode.trim().toUpperCase(),
       title: payload.title.trim(),
       units: payload.units,
+      semester: payload.semester,
+      level: payload.level,
     }),
   });
 
