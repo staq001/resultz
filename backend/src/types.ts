@@ -39,15 +39,18 @@ export interface reqUser {
   id: string;
   name: string;
   matricNo: string;
+  department: string | null;
   email: string;
   avatar: string | null;
   isAdmin: boolean;
+  isStaff?: boolean;
 }
 
 export interface safeUser {
   id: string;
   name: string;
   matricNo: string;
+  department: string | null;
   email: string;
   avatar: string | null;
 }
@@ -132,6 +135,7 @@ export type userOptions = {
   name: string;
   email: string;
   matricNo?: string;
+  department?: string;
   password: string;
 };
 
@@ -180,6 +184,8 @@ export type FindCoursesBySemester = {
   semester: string;
 };
 
+export type semesterEnum = "Harmattan" | "Rain";
+
 export interface CourseService {
   addCourse: (course: NewCourse, userId: string) => Promise<Partial<NewUser>>;
   deleteCourse: (courseId: string) => Promise<void>;
@@ -189,6 +195,8 @@ export interface CourseService {
     department: string,
     limit: number,
     page: number,
+    semester: semesterEnum,
+    level?: number,
   ) => Promise<{
     page: number;
     totalPages: number;

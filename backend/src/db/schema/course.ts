@@ -1,4 +1,10 @@
-import { mysqlTable, varchar, timestamp, int } from "drizzle-orm/mysql-core";
+import {
+  mysqlTable,
+  varchar,
+  timestamp,
+  int,
+  mysqlEnum,
+} from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
 import { users } from "./user";
 import { departments } from "./department";
@@ -14,6 +20,8 @@ export const courses = mysqlTable("courses", {
   departmentId: varchar("department_id", { length: 255 })
     .notNull()
     .references(() => departments.id, { onDelete: "cascade" }),
+  semester: mysqlEnum("semester", ["Rain", "Harmattan"]).notNull(),
+  level: int("level").notNull(),
   createdBy: varchar("created_by", { length: 255 })
     .notNull()
     .references(() => users.id),

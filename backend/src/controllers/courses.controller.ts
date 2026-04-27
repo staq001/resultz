@@ -1,5 +1,9 @@
 import type { Context } from "hono";
-import type { CourseContext, UpdateCourseContext } from "../types";
+import type {
+  CourseContext,
+  semesterEnum,
+  UpdateCourseContext,
+} from "../types";
 import { CourseService } from "../services/course.service";
 
 export class CourseController {
@@ -88,7 +92,8 @@ export class CourseController {
     }
   };
   getAllCourses = async (c: Context) => {
-    const { limit, page } = c.req.query();
+    const { limit, page, level } = c.req.query();
+    const semester = c.req.query("semester") as semesterEnum;
     const departmentId = c.req.param("departmentId");
 
     try {
@@ -96,6 +101,8 @@ export class CourseController {
         departmentId,
         Number(limit),
         Number(page),
+        semester,
+        Number(level),
       );
 
       return c.json({

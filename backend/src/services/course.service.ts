@@ -1,9 +1,15 @@
-import type { NewCourse, Values, Table, CourseService as CS } from "../types";
+import type {
+  NewCourse,
+  Values,
+  Table,
+  CourseService as CS,
+  semesterEnum,
+} from "../types";
 import { courses } from "../db/schema/course";
 import { db } from "../db/mysql";
 import { BadRequest, InternalServerError, NotFound } from "../utils/error";
 import { logger } from "../utils/logger";
-import { eq, getTableColumns, sql } from "drizzle-orm";
+import { and, eq, getTableColumns, sql } from "drizzle-orm";
 
 export class CourseService implements CS {
   async addCourse(courseValues: NewCourse) {
@@ -46,11 +52,11 @@ export class CourseService implements CS {
 
   async findSpecificCourse(courseId: string) {
     try {
-      const { id, title, courseCode, departmentId, units } =
+      const { id, title, courseCode, departmentId, units, semester, level } =
         getTableColumns(courses);
 
       const [course] = await db
-        .select({ id, title, courseCode, departmentId, units })
+        .select({ id, title, courseCode, departmentId, units, semester, level })
         .from(courses)
         .where(eq(courses.id, courseId));
 
@@ -77,9 +83,17 @@ export class CourseService implements CS {
     }
   }
 
-  async getAllCourses(department_id: string, limit: number, page: number) {
+  async getAllCourses(
+    department_id: string,
+    limit: number,
+    page: number,
+    semester: semesterEnum,
+    level?: number,
+  ) {
     page = page || 1;
     limit = limit || 10;
+
+    let allCourses;
 
     const skip = (page - 1) * limit;
 
@@ -92,14 +106,52 @@ export class CourseService implements CS {
       const count = total[0]?.count;
       if (!count || count === 0) throw new NotFound("No courses found");
 
-      const { id, title, courseCode, departmentId, units } =
+      const { id, title, courseCode, departmentId, units, semester, level } =
         getTableColumns(courses);
-      const allCourses = await db
-        .select({ id, title, courseCode, departmentId, units })
-        .from(courses)
-        .where(eq(courses.departmentId, department_id))
-        .limit(limit)
-        .offset(skip);
+
+      if (level) {
+        allCourses = await db
+          .select({
+            id,
+            title,
+            courseCode,
+            departmentId,
+            units,
+            semester,
+            level,
+          })
+          .from(courses)
+          .where(
+            and(
+              eq(courses.departmentId, department_id),
+              eq(courses.semester, semester),
+              eq(courses.level, level),
+            ),
+          )
+          .limit(limit)
+          .offset(skip);
+      } else {
+        allCourses = await db
+          .select({
+            id,
+            title,
+            courseCode,
+            departmentId,
+            units,
+            semester,
+            level,
+          })
+          .from(courses)
+          .where(
+            and(
+              eq(courses.departmentId, department_id),
+              eq(courses.semester, semester),
+            ),
+          )
+          .limit(limit)
+          .offset(skip);
+      }
+
       if (!allCourses || allCourses.length === 0)
         throw new NotFound("No courses found");
 
