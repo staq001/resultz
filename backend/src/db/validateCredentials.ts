@@ -22,6 +22,7 @@ export async function validateCredentials(
       password,
       matricNo,
       department,
+      entryYear,
     } =
       getTableColumns(users);
 
@@ -43,6 +44,7 @@ export async function validateCredentials(
           password,
           matricNo,
           department,
+          entryYear,
         })
         .from(users)
       .where(

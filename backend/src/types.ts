@@ -17,7 +17,10 @@ import type {
   createDepartmentSchema,
   updateDepartmentSchema,
 } from "@/schema/department.schema";
-import type { registerCourseSchema } from "@/schema/registration.schema";
+import type {
+  registerCourseSchema,
+  updateRegisteredCourseSchema,
+} from "@/schema/registration.schema";
 import type { scoreCourseSchema } from "@/schema/scoreCourses.schema";
 import type { addSessionSchema } from "./schema/session.schema";
 
@@ -40,6 +43,7 @@ export interface reqUser {
   name: string;
   matricNo: string;
   department: string | null;
+  entryYear: number | null;
   email: string;
   avatar: string | null;
   isAdmin: boolean;
@@ -51,6 +55,7 @@ export interface safeUser {
   name: string;
   matricNo: string;
   department: string | null;
+  entryYear: number | null;
   email: string;
   avatar: string | null;
 }
@@ -136,6 +141,7 @@ export type userOptions = {
   email: string;
   matricNo?: string;
   department?: string;
+  entryYear?: number;
   password: string;
 };
 
@@ -200,6 +206,13 @@ export interface CourseService {
   ) => Promise<{
     page: number;
     totalPages: number;
+    courses: Partial<Course>[];
+  }>;
+  getAvailableCoursesForStudent: (userId: string) => Promise<{
+    department: { id: string; name: string };
+    currentSession: { id: string; schoolSession: string };
+    level: number;
+    semester: semesterEnum;
     courses: Partial<Course>[];
   }>;
 }
@@ -270,11 +283,23 @@ export type EmailPayload = {
 
 /** REGISTRATION */
 type RegisterCourseSchema = z.infer<typeof registerCourseSchema>;
+type UpdateRegisteredCourseSchema = z.infer<
+  typeof updateRegisteredCourseSchema
+>;
 
 export type RegisterCourseContext = Context<
   AppEnv,
   any,
   { in: { json: RegisterCourseSchema }; out: { json: RegisterCourseSchema } }
+>;
+
+export type UpdateRegisteredCourseContext = Context<
+  AppEnv,
+  any,
+  {
+    in: { json: UpdateRegisteredCourseSchema };
+    out: { json: UpdateRegisteredCourseSchema };
+  }
 >;
 
 export type RegisterCourse = {

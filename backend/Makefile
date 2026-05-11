@@ -29,6 +29,9 @@ compose-down-v:
 compose-down-nocache:
 	docker compose -f $(DEV_COMPOSE_FILE) build -no-cache
 
+.PHONY: compose-mysql
+compose-mysql:
+	docker compose -f $(DEV_COMPOSE_FILE) exec db mysql -u root -p
 ### tests
 .PHONY: run-tests
 run-tests:

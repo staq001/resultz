@@ -23,13 +23,13 @@ export const courseRegistrations = mysqlTable(
     courseId: varchar("course_id", { length: 36 })
       .notNull()
       .references(() => courses.id, { onDelete: "cascade" }),
-    semester: varchar("semester", {length: 36})
+    semester: varchar("semester", { length: 36 })
       .notNull()
       .references(() => session.id, { onDelete: "cascade" }),
     registeredAt: timestamp("registered_at").defaultNow().notNull(),
   },
   (table) => [
-    unique("unique_user_course_semester_year").on(
+    unique("unique_user_course_semester").on(
       table.userId,
       table.courseId,
       table.semester,

@@ -300,11 +300,11 @@ export class UserService implements US {
   }
 
   private async getUserById(userId: string) {
-      const { id, name, matricNo, department, email, avatar, publicId } =
+      const { id, name, matricNo, department, entryYear, email, avatar, publicId } =
         getTableColumns(users);
 
       const [user] = await db
-        .select({ id, name, matricNo, department, email, avatar, publicId })
+        .select({ id, name, matricNo, department, entryYear, email, avatar, publicId })
         .from(users)
         .where(eq(users.id, userId));
 
@@ -319,6 +319,7 @@ export class UserService implements US {
         name,
         matricNo,
         department,
+        entryYear,
         email,
         avatar,
         publicId,
@@ -332,6 +333,7 @@ export class UserService implements US {
           name,
           matricNo,
           department,
+          entryYear,
           email,
           avatar,
           publicId,

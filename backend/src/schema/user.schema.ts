@@ -1,15 +1,34 @@
 import { z } from "zod";
 
-export const signupSchema = z.object({
-  name: z.string().min(1, "Full name is required"),
-  email: z.email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  matricNo: z
-    .string()
-    .min(10, "Matric No must be at least 8 characters")
-    .optional(),
-  department: z.string().min(2, "Department is required").optional(),
-});
+const currentYear = new Date().getFullYear();
+
+export const signupSchema = z
+  .object({
+    name: z.string().min(1, "Full name is required"),
+    email: z.email("Invalid email address"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    matricNo: z
+      .string()
+      .min(10, "Matric No must be at least 8 characters")
+      .optional(),
+    department: z.string().min(2, "Department is required").optional(),
+    entryYear: z
+      .number()
+      .int("Entry year must be a whole number")
+      .min(1900, "Entry year is invalid")
+      .max(currentYear + 1, "Entry year cannot be in the far future")
+      .optional(),
+  })
+  .refine(
+    (value) => {
+      const isStudentSignup = Boolean(value.matricNo || value.department);
+      return !isStudentSignup || typeof value.entryYear === "number";
+    },
+    {
+      message: "Entry year is required for student accounts",
+      path: ["entryYear"],
+    },
+  );
 
 export const loginSchema = z
   .object({
