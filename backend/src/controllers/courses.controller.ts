@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import type {
+  AppEnv,
   CourseContext,
   semesterEnum,
   UpdateCourseContext,
@@ -110,6 +111,28 @@ export class CourseController {
         message: "Courses fetched successfully!",
         data: { courses },
       });
+    } catch (e: any) {
+      return c.json(
+        { message: e.message || "Internal Server Error" },
+        e.status || 500,
+      );
+    }
+  };
+
+  getAvailableCoursesForStudent = async (c: Context<AppEnv>) => {
+    const { id } = c.get("user");
+
+    try {
+      const data = await this.courseService.getAvailableCoursesForStudent(id);
+
+      return c.json(
+        {
+          status: 200,
+          message: "Available courses fetched successfully!",
+          data,
+        },
+        200,
+      );
     } catch (e: any) {
       return c.json(
         { message: e.message || "Internal Server Error" },
