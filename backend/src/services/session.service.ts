@@ -92,11 +92,23 @@ export class SessionService {
 
   async getCurrentSession() {
     try {
-      const [schSession] = await db.select().from(currentSession);
+      const [activeSession] = await db.select().from(currentSession);
 
-      return schSession?.currentSession;
+      if (!activeSession?.currentSession) return null;
+
+      const [schSession] = await db
+        .select({
+          id: session.id,
+          schoolSession: session.schoolSession,
+        })
+        .from(session)
+        .where(eq(session.schoolSession, activeSession.currentSession));
+
+      if (!schSession) throw new NotFound("Current session was not found");
+      return schSession;
     } catch (e) {
       logger.error(`Error fetching current session, ${e}`);
+      if (e instanceof NotFound) throw e;
       throw new InternalServerError(`Error fetching current session`);
     }
   }

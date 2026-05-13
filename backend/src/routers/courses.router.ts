@@ -4,8 +4,7 @@ import { Auth } from "@/middleware/auth";
 import { CourseController } from "@/controllers/courses.controller";
 import { addCourseSchema, updateCourseSchema } from "@/schema/courses.schema";
 
-const { authentication, adminProtectedRoute, adminOrStaffProtectedRoute } =
-  new Auth();
+const { authentication, adminProtectedRoute } = new Auth();
 const app = new Hono();
 
 const {
@@ -14,6 +13,7 @@ const {
   updateCourse,
   findSpecificCourse,
   getAllCourses,
+  getAvailableCoursesForStudent,
 } = new CourseController();
 
 app.post(
@@ -39,6 +39,8 @@ app.patch(
   updateCourse,
 );
 
+app.get("/courses/available", authentication, getAvailableCoursesForStudent);
+
 app.get(
   "/courses/:courseId",
   authentication,
@@ -46,11 +48,6 @@ app.get(
   findSpecificCourse,
 );
 
-app.get(
-  "/courses/department/:departmentId",
-  authentication,
-  adminOrStaffProtectedRoute,
-  getAllCourses,
-);
+app.get("/courses/department/:departmentId", authentication, getAllCourses);
 
 export default app;

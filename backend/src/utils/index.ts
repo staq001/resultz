@@ -49,3 +49,14 @@ export function verifyHash(data: string, salt: string, originalHash: string) {
 
   return hash === originalHash;
 }
+
+export function grading(examScore: number, testScore: number) {
+  const totalScore = examScore + testScore;
+
+  if (totalScore >= 70) return "A";
+  if (totalScore >= 60 && totalScore < 70) return "B";
+  if (totalScore >= 50 && totalScore < 60) return "C";
+  if (totalScore >= 45 && totalScore < 50) return "D";
+  if (totalScore >= 40 && totalScore < 45) return "E";
+  return "F";
+}
