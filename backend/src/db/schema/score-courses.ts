@@ -25,10 +25,17 @@ export const scoreCourses = mysqlTable(
       .references(() => courseRegistrations.id, { onDelete: "cascade" }),
     testScore: int("test_score").notNull(),
     examScore: int("exam_score").notNull(),
+    grade: varchar("grade", { length: 2 }).notNull(),
     semester: varchar("semester", { length: 36 })
       .notNull()
       .references(() => session.id, { onDelete: "cascade" }),
     scoredAt: timestamp("registered_at").defaultNow().notNull(),
   },
-  (table) => [uniqueIndex("unique_course_score").on(table.registeredCourseId)],
+  (table) => [
+    uniqueIndex("unique_course_score").on(
+      table.registeredCourseId,
+      table.semester,
+      table.userId,
+    ),
+  ],
 );

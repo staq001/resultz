@@ -5,7 +5,7 @@ import { Auth } from "@/middleware/auth";
 import { ScoreController } from "@/controllers/scoreCourses.controller";
 import { scoreCourseSchema } from "@/schema/scoreCourses.schema";
 
-const { authentication, adminProtectedRoute } = new Auth();
+const { authentication, adminProtectedRoute, staffProtectedRoute } = new Auth();
 
 const app = new Hono();
 
@@ -13,23 +13,23 @@ const {
   scoreCourse,
   updateScore,
   fetchCourseScore,
-  getAllScoredCoursesBySemsesterorYear,
+  getScoresForCourse,
+  getAllScoredCoursesBySemsester,
   getAllRegisteredCoursesBySpecificUser,
-  getAllScoredCoursesBySemsesterorYearAdmin,
 } = new ScoreController();
 
 app.post(
-  "/scores/input/:registeredCourseId",
+  "/scores/input/:registeredCourseId/:semesterId",
   authentication,
-  adminProtectedRoute,
+  staffProtectedRoute,
   zodValidator(scoreCourseSchema),
   scoreCourse,
 );
 
 app.patch(
-  "/scores/update/:scoreId",
+  "/scores/update/:registeredCourseId/:semesterId",
   authentication,
-  adminProtectedRoute,
+  staffProtectedRoute,
   zodValidator(scoreCourseSchema),
   updateScore,
 );
@@ -41,23 +41,19 @@ app.get(
   getAllRegisteredCoursesBySpecificUser,
 );
 
-app.get(
-  "/scores/semester-or-year",
-  authentication,
-  getAllScoredCoursesBySemsesterorYear,
-);
+app.get("/scores/semester", authentication, getAllScoredCoursesBySemsester);
 
 app.get(
-  "/scores/admin/semester-or-year",
+  "/scores/course/:courseCode",
   authentication,
-  adminProtectedRoute,
-  getAllScoredCoursesBySemsesterorYearAdmin,
+  staffProtectedRoute,
+  getScoresForCourse,
 );
 
 app.get(
   "/scores/:scoreId",
   authentication,
-  adminProtectedRoute,
+  staffProtectedRoute,
   fetchCourseScore,
 );
 

@@ -317,7 +317,7 @@ export type CheckRegisteredCourses = {
 type ScoreCoursesSchema = z.infer<typeof scoreCourseSchema>;
 
 export type ScoreCourseContext = Context<
-  Env,
+  AppEnv,
   any,
   { in: { json: ScoreCoursesSchema }; out: { json: ScoreCoursesSchema } }
 >;

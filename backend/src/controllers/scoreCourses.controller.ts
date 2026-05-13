@@ -12,19 +12,21 @@ export class ScoreController {
 
   scoreCourse = async (c: ScoreCourseContext) => {
     const { examScore, testScore } = c.req.valid("json");
-    const registeredCourseId = c.req.param("registeredCourseId");
+    const { registeredCourseId, semesterId } = c.req.param();
 
     try {
-      await this.scoreService.scoreCourse(
+      const scoreId = await this.scoreService.scoreCourse(
         examScore,
         testScore,
-        registeredCourseId,
+        registeredCourseId as string,
+        semesterId as string,
       );
 
       return c.json(
         {
           status: 201,
           message: "Score recorded successfully!",
+          data: { scoreId },
         },
         201,
       );
@@ -41,13 +43,26 @@ export class ScoreController {
 
   updateScore = async (c: ScoreCourseContext) => {
     const { examScore, testScore } = c.req.valid("json");
-    const scoreId = c.req.param("scoreId");
+    const { semesterId, registeredCourseId } = c.req.param();
+    const matricNo = c.req.query("matricNo");
 
     try {
-      await this.scoreService.updateCourseScore(examScore, testScore, scoreId);
+      if (!matricNo) throw new BadRequest("Matric number is required");
+
+      const scoredCourse = await this.scoreService.updateCourseScore(
+        examScore,
+        testScore,
+        matricNo as string,
+        registeredCourseId as string,
+        semesterId as string,
+      );
 
       return c.json(
-        { status: 200, message: "Score updated successfully!" },
+        {
+          status: 200,
+          message: "Score updated successfully!",
+          data: { scoredCourse },
+        },
         200,
       );
     } catch (e: any) {
@@ -86,7 +101,7 @@ export class ScoreController {
     }
   };
 
-  getAllScoredCoursesBySemsesterorYear = async (c: Context<AppEnv>) => {
+  getAllScoredCoursesBySemsester = async (c: Context<AppEnv>) => {
     const user = c.get("user");
     const { semester } = c.req.query();
     try {
@@ -116,17 +131,25 @@ export class ScoreController {
       );
     }
   };
-  getAllScoredCoursesBySemsesterorYearAdmin = async (c: Context<AppEnv>) => {
+
+  getScoresForCourse = async (c: Context<AppEnv>) => {
+    const { courseCode } = c.req.param();
     const { semester } = c.req.query();
+
     try {
+      if (!courseCode) throw new BadRequest("Course code is required");
       if (!semester) throw new BadRequest("Semester is required");
-      const scores = await this.scoreService.getScoresBySemesterA(semester);
+
+      const payload = await this.scoreService.getScoresForCourse(
+        courseCode.toUpperCase(),
+        semester,
+      );
 
       return c.json(
         {
           status: 200,
-          message: "Scores fetched successfully!",
-          data: { scores },
+          message: "Course scores fetched successfully!",
+          data: payload,
         },
         200,
       );
