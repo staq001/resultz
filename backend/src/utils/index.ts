@@ -60,3 +60,36 @@ export function grading(examScore: number, testScore: number) {
   if (totalScore >= 40 && totalScore < 45) return "E";
   return "F";
 }
+
+export const gradePoints: Record<string, number> = {
+  A: 5,
+  B: 4,
+  C: 3,
+  D: 2,
+  E: 1,
+  F: 0,
+};
+
+export function classOfDegree(cgpa: number) {
+  if (cgpa >= 4.5) return "FIRST CLASS";
+  if (cgpa >= 3.5) return "SECOND CLASS HONOURS (UPPER DIVISION)";
+  if (cgpa >= 2.4) return "SECOND CLASS HONOURS (LOWER DIVISION)";
+  if (cgpa >= 1.5) return "THIRD CLASS";
+  return "PASS";
+}
+export function getSemesterLabel(term: string) {
+  if (term === "Harmattan") return "First Semester";
+  if (term === "Rain") return "Second Semester";
+  return term;
+}
+
+export function getSessionStartYear(sessionName: string) {
+  const match = sessionName.match(/\d{4}/);
+  return match ? Number(match[0]) : Number.MAX_SAFE_INTEGER;
+}
+
+export function getSemesterOrder(term: string) {
+  if (term === "Harmattan") return 1;
+  if (term === "Rain") return 2;
+  return 99;
+}

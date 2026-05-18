@@ -164,6 +164,33 @@ export class ScoreController {
     }
   };
 
+  getComprehensiveReport = async (c: Context<AppEnv>) => {
+    const user = c.get("user");
+
+    try {
+      const report = await this.scoreService.getUserComprehensiveReport(
+        user.id,
+      );
+
+      return c.json(
+        {
+          status: 200,
+          message: "Comprehensive report fetched successfully!",
+          data: { report },
+        },
+        200,
+      );
+    } catch (e: any) {
+      return c.json(
+        {
+          status: e.status || 500,
+          message: e.message || "Internal Server Error",
+        },
+        e.status || 500,
+      );
+    }
+  };
+
   getAllRegisteredCoursesBySpecificUser = async (c: Context<AppEnv>) => {
     const { userId } = c.req.param();
     const { semester } = c.req.query();

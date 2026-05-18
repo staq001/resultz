@@ -14,6 +14,7 @@ const {
   updateScore,
   fetchCourseScore,
   getScoresForCourse,
+  getComprehensiveReport,
   getAllScoredCoursesBySemsester,
   getAllRegisteredCoursesBySpecificUser,
 } = new ScoreController();
@@ -42,6 +43,8 @@ app.get(
 );
 
 app.get("/scores/semester", authentication, getAllScoredCoursesBySemsester);
+
+app.get("/scores/comprehensive-report", authentication, getComprehensiveReport);
 
 app.get(
   "/scores/course/:courseCode",

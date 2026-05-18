@@ -321,3 +321,24 @@ export type ScoreCourseContext = Context<
   any,
   { in: { json: ScoreCoursesSchema }; out: { json: ScoreCoursesSchema } }
 >;
+
+export type comprehensiveReportRows = {
+  scoreId: string;
+  testScore: number;
+  examScore: number;
+  grade: string;
+  scoredAt: Date;
+  courseCode: string;
+  courseTitle: string;
+  units: number;
+  semesterTerm: "Rain" | "Harmattan";
+  semesterId: string;
+  sessionName: string;
+  studentId: string;
+  name: string;
+  matricNo: string | null;
+  department: string | null;
+  entryYear: number | null;
+  isRusticated: boolean | null;
+  faculty: string;
+}[];
