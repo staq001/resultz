@@ -1,4 +1,4 @@
-import { eq, getTableColumns, or } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { db } from "./mysql";
 import { NotFound, Unauthorized } from "@/utils/error";
 import { isAccountLocked, recordFailure, recordSuccess } from "@/redis/lockup";
@@ -10,22 +10,10 @@ export async function validateCredentials(
     email?: string;
     matricNo?: string;
   },
+  loginType: "user" | "admin" | "staff" = "user",
   inputPassword: string,
 ) {
   try {
-    const {
-      id,
-      name,
-      email,
-      softDeleted,
-      isVerified,
-      password,
-      matricNo,
-      department,
-      entryYear,
-    } =
-      getTableColumns(users);
-
     const normalizedEmail = inputIdentifier.email?.trim();
     const normalizedMatricNo = inputIdentifier.matricNo?.trim();
     const lookupKey = normalizedEmail || normalizedMatricNo;
@@ -35,24 +23,38 @@ export async function validateCredentials(
     }
 
     const [user] = await db
-        .select({
-          id,
-          name,
-          email,
-          softDeleted,
-          isVerified,
-          password,
-          matricNo,
-          department,
-          entryYear,
-        })
-        .from(users)
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        matricNo: users.matricNo,
+        department: users.department,
+        entryYear: users.entryYear,
+        avatar: users.avatar,
+        softDeleted: users.softDeleted,
+        isVerified: users.isVerified,
+        password: users.password,
+        isAdmin: users.isAdmin,
+        isStaff: users.isStaff,
+        isRusticated: users.isRusticated,
+      })
+      .from(users)
       .where(
         or(
           normalizedEmail ? eq(users.email, normalizedEmail) : undefined,
-          normalizedMatricNo ? eq(users.matricNo, normalizedMatricNo) : undefined,
+          normalizedMatricNo
+            ? eq(users.matricNo, normalizedMatricNo)
+            : undefined,
         )!,
       );
+
+    if (loginType === "admin" && (!user || !user.isAdmin)) {
+      throw new NotFound("Wrong email/matric number or password combination");
+    }
+
+    if (loginType === "staff" && (!user || !user.isStaff)) {
+      throw new NotFound("Wrong email/matric number or password combination");
+    }
 
     if (!user || user.softDeleted)
       throw new NotFound("Wrong email/matric number or password combination");
@@ -71,7 +73,9 @@ export async function validateCredentials(
       }
       await recordSuccess(lookupKey);
     }
-    return user;
+
+    const { password, softDeleted, isVerified, ...userWithoutPassword } = user;
+    return userWithoutPassword;
   } catch (e) {
     throw e;
   }

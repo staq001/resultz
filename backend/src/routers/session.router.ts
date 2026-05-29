@@ -2,9 +2,8 @@ import { Hono } from "hono";
 import { zodValidator } from "@/middleware/errorHandler";
 import { Auth } from "@/middleware/auth";
 import { SessionController } from "@/controllers/session.controller";
-import { addSessionSchema } from "@/schema/session.schema";
-const { authentication, adminProtectedRoute, adminOrStaffProtectedRoute } =
-  new Auth();
+import { addSessionSchema, lockSessionSchema } from "@/schema/session.schema";
+const { authentication, adminProtectedRoute } = new Auth();
 const app = new Hono();
 
 const {
@@ -12,6 +11,7 @@ const {
   updateSession,
   setSession,
   getCurrentSession,
+  lockSession,
   getSessions,
 } = new SessionController();
 
@@ -29,6 +29,14 @@ app.put(
   adminProtectedRoute,
   zodValidator(addSessionSchema),
   updateSession,
+);
+
+app.put(
+  "/sessions/lock",
+  authentication,
+  adminProtectedRoute,
+  zodValidator(lockSessionSchema),
+  lockSession,
 );
 
 app.put(

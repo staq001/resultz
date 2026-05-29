@@ -10,12 +10,13 @@ import {
   NotFound,
 } from "../utils/error";
 import { currentSession } from "@/db/schema/currentSession";
+import { users } from "@/db/schema/user";
 
 export class SessionService {
   async createSession(sessionName: string) {
     try {
       const [schSession] = await db
-        .select()
+        .select({ id: session.id, schoolSession: session.schoolSession })
         .from(session)
         .where(eq(session.schoolSession, sessionName));
 
@@ -87,6 +88,37 @@ export class SessionService {
       logger.error(`Error persisting session, ${e}`);
       if (e instanceof NotFound) throw e;
       throw new InternalServerError(`Error persisting session`);
+    }
+  }
+
+  async lockRegistration(sessionName: string, userId: string) {
+    try {
+      const [user] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.id, userId));
+
+      if (!user) throw new NotFound("User not found");
+
+      const [schSession] = await db
+        .select({ id: session.id, schoolSession: session.schoolSession })
+        .from(session)
+        .where(eq(session.schoolSession, sessionName));
+
+      if (!schSession) throw new NotFound("Session not found");
+
+      await db
+        .update(session)
+        .set({
+          registration_status: "Locked",
+          lockedBy: userId,
+          lockedAt: new Date(),
+        })
+        .where(eq(session.schoolSession, sessionName));
+    } catch (e) {
+      logger.error(`Error locking registration, ${e}`);
+      if (e instanceof NotFound) throw e;
+      throw new InternalServerError(`Error locking registration`);
     }
   }
 

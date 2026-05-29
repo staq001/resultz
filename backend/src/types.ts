@@ -22,7 +22,10 @@ import type {
   updateRegisteredCourseSchema,
 } from "@/schema/registration.schema";
 import type { scoreCourseSchema } from "@/schema/scoreCourses.schema";
-import type { addSessionSchema } from "./schema/session.schema";
+import type {
+  addSessionSchema,
+  lockSessionSchema,
+} from "./schema/session.schema";
 
 export interface RateLimiterConfig {
   identifier: string;
@@ -72,16 +75,24 @@ type UpdateSchema = z.infer<typeof updateSchema>;
 type UpdatePasswordSchema = z.infer<typeof updatePasswordSchema>;
 type VerifyOtpSchema = z.infer<typeof verifyOtpSchema>;
 type AddSessionSchema = z.infer<typeof addSessionSchema>;
+type LockSessionSchema = z.infer<typeof lockSessionSchema>;
 
 export type SignupContext = Context<
   Env,
   any,
   { in: { json: SignupSchema }; out: { json: SignupSchema } }
 >;
+
 export type SessionContext = Context<
   Env,
   any,
   { in: { json: AddSessionSchema }; out: { json: AddSessionSchema } }
+>;
+
+export type LockSessionContext = Context<
+  AppEnv,
+  any,
+  { in: { json: LockSessionSchema }; out: { json: LockSessionSchema } }
 >;
 
 export type GetUserContext = Context<AppEnv, any>;
@@ -134,6 +145,7 @@ export type loginOptions = {
   email?: string;
   matricNo?: string;
   password: string;
+  loginType: "user" | "admin" | "staff";
 };
 
 export type userOptions = {
@@ -187,7 +199,7 @@ export type NewCourse = typeof courses.$inferInsert;
 export type Course = typeof courses.$inferSelect;
 
 export type FindCoursesBySemester = {
-  semester: string;
+  semesterId: string;
 };
 
 export type semesterEnum = "Harmattan" | "Rain";
@@ -305,12 +317,12 @@ export type UpdateRegisteredCourseContext = Context<
 export type RegisterCourse = {
   userId: string;
   courseCode: string;
-  semester: string;
+  semesterId: string;
 };
 
 export type CheckRegisteredCourses = {
   userId: string;
-  semester: string;
+  semesterId: string;
 };
 
 /** SCORES */

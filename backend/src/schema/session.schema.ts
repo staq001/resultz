@@ -7,3 +7,7 @@ export const addSessionSchema = z.object({
     .min(10, "Session name must be at least 6 characters")
     .optional(),
 });
+
+export const lockSessionSchema = z.object({
+  sessionName: z.string().min(10, "Session name must be at least 6 characters"),
+});

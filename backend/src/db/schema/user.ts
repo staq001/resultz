@@ -13,10 +13,14 @@ export const users = mysqlTable("users", {
     .notNull()
     .default(sql`(uuid())`),
   name: varchar("name", { length: 255 }).notNull(),
-  matricNo: varchar("matric_no", { length: 20 }).unique(),
+  matricNo: varchar("matric_no", { length: 20 }).unique(
+    "users_matric_no_unique",
+  ),
   department: varchar("department", { length: 255 }),
   entryYear: int("entry_year"),
-  email: varchar("email", { length: 255 }).notNull().unique(),
+  email: varchar("email", { length: 255 }).notNull().unique(
+    "users_email_unique",
+  ),
   password: varchar("password", { length: 255 }).notNull(),
   isAdmin: boolean("is_admin").default(false),
   isStaff: boolean("is_staff").default(false),
@@ -25,5 +29,6 @@ export const users = mysqlTable("users", {
   softDeleted: boolean("soft_deleted").default(false),
   isVerified: boolean("is_verified").default(false),
   isRusticated: boolean("is_rusticated").default(false),
+  isGraduated: boolean("is_graduated").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });

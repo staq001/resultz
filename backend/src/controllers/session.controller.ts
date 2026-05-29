@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { SessionService } from "../services/session.service";
-import type { AppEnv, SessionContext } from "@/types";
+import type { AppEnv, LockSessionContext, SessionContext } from "@/types";
 
 export class SessionController {
   private sessionService;
@@ -55,6 +55,20 @@ export class SessionController {
     try {
       const currentSession = await this.sessionService.getCurrentSession();
       return c.json({ data: currentSession }, 200);
+    } catch (e: any) {
+      return c.json(
+        { message: e.message || "Internal Server Error" },
+        e.status || 500,
+      );
+    }
+  };
+
+  lockSession = async (c: LockSessionContext) => {
+    try {
+      const { sessionName } = c.req.valid("json");
+      const { id } = c.get("user");
+      await this.sessionService.lockRegistration(sessionName, id);
+      return c.json({ message: "Session locked successfully" }, 200);
     } catch (e: any) {
       return c.json(
         { message: e.message || "Internal Server Error" },

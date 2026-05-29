@@ -28,6 +28,9 @@ export class Auth {
 
       await next();
     } catch (e: any) {
+      if (e.name === "TokenExpiredError" || e.name === "JsonWebTokenError") {
+        return c.json({ error: "Please authenticate" }, 401);
+      }
       return c.json(
         { error: e.message || "Please authenticate" },
         e.status || 401,
@@ -70,7 +73,7 @@ export class Auth {
   adminOrStaffProtectedRoute = createMiddleware<AppEnv>(
     async (c: Context, next: Next) => {
       try {
-        const user = c.get("user") as reqUser & { isStaff?: boolean };
+        const user = c.get("user") as reqUser;
 
         if (!user || (!user.isAdmin && !user.isStaff)) {
           return c.json({ error: "Unauthorized" }, 403);
@@ -98,33 +101,19 @@ export class Auth {
 
   private async getUser(userEmail: string, userId: string) {
     try {
-      const {
-        id,
-        name,
-        email,
-        matricNo,
-        department,
-        entryYear,
-        avatar,
-        isAdmin,
-        softDeleted,
-        isRusticated,
-        isStaff,
-      } = getTableColumns(users);
-
       const [user] = await db
         .select({
-          id,
-          name,
-          email,
-          matricNo,
-          department,
-          entryYear,
-          avatar,
-          isAdmin,
-          softDeleted,
-          isRusticated,
-          isStaff,
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          matricNo: users.matricNo,
+          department: users.department,
+          entryYear: users.entryYear,
+          avatar: users.avatar,
+          isAdmin: users.isAdmin,
+          softDeleted: users.softDeleted,
+          isRusticated: users.isRusticated,
+          isStaff: users.isStaff,
         })
         .from(users)
         .where(and(eq(users.email, userEmail), eq(users.id, userId)));
@@ -132,14 +121,10 @@ export class Auth {
       if (!user || user.softDeleted)
         throw new Unauthorized("Please authenticate!");
 
-      return this.formatUserObject(user);
+      const { softDeleted, ...userWithoutSoftDeleted } = user;
+      return userWithoutSoftDeleted;
     } catch (e) {
       throw e;
     }
-  }
-
-  private formatUserObject(user: any) {
-    const { softDeleted, ...rest } = user;
-    return rest;
   }
 }

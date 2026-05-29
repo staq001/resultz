@@ -37,7 +37,14 @@ app.use(
   }),
 );
 
-app.use(limiter);
+app.use("*", async (c, next) => {
+  if (c.req.path === "/api/v1/users/login") {
+    await next();
+    return;
+  }
+
+  return limiter(c, next);
+});
 app.use(logger());
 app.use(
   "*",
