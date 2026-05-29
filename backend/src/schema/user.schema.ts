@@ -35,6 +35,7 @@ export const loginSchema = z
     email: z.email("Invalid email address").optional(),
     matricNo: z.string().min(1, "Matric number is required").optional(),
     password: z.string().min(1, "Password is required"),
+    loginType: z.enum(["user", "admin", "staff"]).default("user"),
   })
   .refine((value) => Boolean(value.email || value.matricNo), {
     message: "Provide email or matric number to log in",

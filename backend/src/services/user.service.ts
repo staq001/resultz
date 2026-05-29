@@ -69,8 +69,12 @@ export class UserService implements US {
 
   async login(payload: loginOptions) {
     try {
-      const { email, matricNo, password } = payload;
-      const user = await validateCredentials({ email, matricNo }, password);
+      const { email, matricNo, password, loginType } = payload;
+      const user = await validateCredentials(
+        { email, matricNo },
+        loginType,
+        password,
+      );
 
       const sessionId = randomUUID();
       const token = await generateAuthToken({
@@ -81,7 +85,7 @@ export class UserService implements US {
       await setSession(sessionId, user.id);
 
       logger.info("User successfully logged in...");
-      return { user: this.formatNewUserObject(user), token };
+      return { user, token };
     } catch (e: any) {
       if (e instanceof NotFound) throw e;
       if (e instanceof Unauthorized) throw e;
@@ -300,13 +304,30 @@ export class UserService implements US {
   }
 
   private async getUserById(userId: string) {
-      const { id, name, matricNo, department, entryYear, email, avatar, publicId } =
-        getTableColumns(users);
+    const {
+      id,
+      name,
+      matricNo,
+      department,
+      entryYear,
+      email,
+      avatar,
+      publicId,
+    } = getTableColumns(users);
 
-      const [user] = await db
-        .select({ id, name, matricNo, department, entryYear, email, avatar, publicId })
-        .from(users)
-        .where(eq(users.id, userId));
+    const [user] = await db
+      .select({
+        id,
+        name,
+        matricNo,
+        department,
+        entryYear,
+        email,
+        avatar,
+        publicId,
+      })
+      .from(users)
+      .where(eq(users.id, userId));
 
     if (!user) throw new NotFound("User not found");
     return user;
@@ -324,8 +345,7 @@ export class UserService implements US {
         avatar,
         publicId,
         isVerified,
-      } =
-        getTableColumns(users);
+      } = getTableColumns(users);
 
       const [user] = await db
         .select({

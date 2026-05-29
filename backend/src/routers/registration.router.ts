@@ -3,9 +3,12 @@ import { zodValidator } from "@/middleware/errorHandler";
 import { Auth } from "@/middleware/auth";
 
 import { RegistrationController } from "@/controllers/registration.controller";
-import { registerCourseSchema } from "@/schema/registration.schema";
+import {
+  registerCourseSchema,
+  updateRegisteredCourseSchema,
+} from "@/schema/registration.schema";
 
-const { authentication, adminProtectedRoute } = new Auth();
+const { authentication, staffProtectedRoute } = new Auth();
 const app = new Hono();
 
 const {
@@ -14,6 +17,7 @@ const {
   fetchRegisteredCoursesBySemester,
   findCourseByCourseCode,
   fetchRegisteredUsersForCourse,
+  dropRegisteredCourse,
 } = new RegistrationController();
 
 app.post(
@@ -38,8 +42,14 @@ app.get(
 app.get(
   "/courses-registrations/course/:courseCode/users",
   authentication,
-  adminProtectedRoute,
+  staffProtectedRoute,
   fetchRegisteredUsersForCourse,
+);
+
+app.delete(
+  "/courses-registrations/:registeredCourseId",
+  authentication,
+  dropRegisteredCourse,
 );
 
 app.get(
