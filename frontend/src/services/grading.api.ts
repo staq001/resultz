@@ -24,6 +24,41 @@ type RegisteredCourseUserResponse = {
 type ScoreResponse = {
   data?: {
     scoreId?: string;
+    scoredCourse?: ScoreRecordResponse;
+  };
+  message?: string;
+  error?: string;
+};
+
+type ScoreRecordResponse = {
+  id?: string;
+  scoreId?: string;
+  registrationId?: string;
+  registeredCourseId?: string;
+  userId?: string;
+  name?: string;
+  matricNo?: string;
+  email?: string;
+  courseCode?: string;
+  courseTitle?: string;
+  semester?: string;
+  testScore?: number;
+  examScore?: number;
+  grade?: string;
+  scoredAt?: string;
+};
+
+type CourseScoresResponse = {
+  data?: {
+    course?: {
+      id?: string;
+      courseCode?: string;
+      title?: string;
+      units?: number;
+      semester?: string;
+      level?: number;
+    };
+    scores?: ScoreRecordResponse[];
   };
   message?: string;
   error?: string;
@@ -40,6 +75,44 @@ export type RegisteredCourseUserRow = {
   testScore?: number;
   examScore?: number;
 };
+
+export type CourseScoreRow = {
+  scoreId: string;
+  registrationId?: string;
+  registeredCourseId?: string;
+  userId?: string;
+  name?: string;
+  matricNo?: string;
+  email?: string;
+  courseCode?: string;
+  courseTitle?: string;
+  semester?: string;
+  testScore: number;
+  examScore: number;
+  grade: string;
+  scoredAt?: string;
+};
+
+function normalizeScoreRecord(row: ScoreRecordResponse): CourseScoreRow {
+  return {
+    scoreId: row.scoreId ?? row.id ?? "",
+    ...(row.registrationId ? { registrationId: row.registrationId } : {}),
+    ...(row.registeredCourseId
+      ? { registeredCourseId: row.registeredCourseId }
+      : {}),
+    ...(row.userId ? { userId: row.userId } : {}),
+    ...(row.name ? { name: row.name } : {}),
+    ...(row.matricNo ? { matricNo: row.matricNo } : {}),
+    ...(row.email ? { email: row.email } : {}),
+    ...(row.courseCode ? { courseCode: row.courseCode } : {}),
+    ...(row.courseTitle ? { courseTitle: row.courseTitle } : {}),
+    ...(row.semester ? { semester: row.semester } : {}),
+    testScore: row.testScore ?? 0,
+    examScore: row.examScore ?? 0,
+    grade: row.grade ?? "-",
+    ...(row.scoredAt ? { scoredAt: row.scoredAt } : {}),
+  };
+}
 
 export async function fetchRegisteredUsersForCourse(
   apiBaseUrl: string,
@@ -124,11 +197,12 @@ export async function createCourseScore(
   apiBaseUrl: string,
   token: string,
   registeredCourseId: string,
+  semesterId: string,
   testScore: number,
   examScore: number,
 ): Promise<string | undefined> {
   return submitScoreRequest(
-    `${apiBaseUrl}/scores/input/${registeredCourseId}`,
+    `${apiBaseUrl}/scores/input/${registeredCourseId}/${semesterId}`,
     token,
     testScore,
     examScore,
@@ -139,15 +213,87 @@ export async function createCourseScore(
 export async function updateCourseScore(
   apiBaseUrl: string,
   token: string,
-  scoreId: string,
+  matricNo: string,
+  registeredCourseId: string,
+  semesterId: string,
   testScore: number,
   examScore: number,
 ): Promise<void> {
+  const query = new URLSearchParams({ matricNo });
+
   await submitScoreRequest(
-    `${apiBaseUrl}/scores/update/${scoreId}`,
+    `${apiBaseUrl}/scores/update/${encodeURIComponent(
+      registeredCourseId,
+    )}/${encodeURIComponent(semesterId)}?${query.toString()}`,
     token,
     testScore,
     examScore,
     "PATCH",
   );
+}
+
+export async function fetchCourseScore(
+  apiBaseUrl: string,
+  token: string,
+  scoreId: string,
+): Promise<CourseScoreRow> {
+  const response = await fetch(
+    `${apiBaseUrl}/scores/${encodeURIComponent(scoreId)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  const payload = (await response.json().catch(() => ({}))) as ScoreResponse;
+  if (!response.ok) {
+    throw new Error(
+      payload.error ?? payload.message ?? "Unable to fetch score.",
+    );
+  }
+
+  return normalizeScoreRecord(payload.data?.scoredCourse ?? {});
+}
+
+export async function fetchScoresForCourse(
+  apiBaseUrl: string,
+  token: string,
+  courseCode: string,
+  semesterId: string,
+): Promise<{
+  course: {
+    id?: string;
+    courseCode?: string;
+    title?: string;
+    units?: number;
+    semester?: string;
+    level?: number;
+  };
+  scores: CourseScoreRow[];
+}> {
+  const response = await fetch(
+    `${apiBaseUrl}/scores/course/${encodeURIComponent(
+      courseCode,
+    )}?semester=${encodeURIComponent(semesterId)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  const payload = (await response
+    .json()
+    .catch(() => ({}))) as CourseScoresResponse;
+  if (!response.ok) {
+    throw new Error(
+      payload.error ?? payload.message ?? "Unable to fetch course scores.",
+    );
+  }
+
+  return {
+    course: payload.data?.course ?? {},
+    scores: payload.data?.scores?.map(normalizeScoreRecord) ?? [],
+  };
 }

@@ -1,7 +1,12 @@
 import { AdminSettingsPage } from "../pages/AdminSettingsPage";
 import { StaffOverviewPage } from "../pages/StaffOverviewPage";
 import { StaffGradingPage } from "../pages/StaffGradingPage";
-import type { RegisteredCourseUserRow } from "../services/grading.api";
+import { StaffUpdateScorePage } from "../pages/StaffUpdateScorePage";
+import { StaffCourseScoresPage } from "../pages/StaffCourseScoresPage";
+import type {
+  CourseScoreRow,
+  RegisteredCourseUserRow,
+} from "../services/grading.api";
 import type { Course, StaffSection } from "../types/app.types";
 
 type StaffPortalContentProps = {
@@ -9,6 +14,7 @@ type StaffPortalContentProps = {
   departments: string[];
   courses: Course[];
   currentSemester: string;
+  currentSemesterId: string;
   userName: string;
   userEmail: string;
   avatarUrl?: string | null;
@@ -26,6 +32,30 @@ type StaffPortalContentProps = {
     testScore: number;
     examScore: number;
   }) => Promise<{ nextScoreId?: string }>;
+  onFindScore: (params: {
+    matricNo: string;
+    courseCode: string;
+  }) => Promise<CourseScoreRow>;
+  onUpdateScore: (params: {
+    matricNo: string;
+    registrationId: string;
+    testScore: number;
+    examScore: number;
+  }) => Promise<void>;
+  onFetchCourseScores: (
+    courseCode: string,
+    semesterId: string,
+  ) => Promise<{
+    course: {
+      id?: string;
+      courseCode?: string;
+      title?: string;
+      units?: number;
+      semester?: string;
+      level?: number;
+    };
+    scores: CourseScoreRow[];
+  }>;
   onUpdateName: (name: string) => Promise<void>;
   onUpdatePassword: (password: string) => Promise<void>;
   onUploadAvatar: (file: File) => Promise<void>;
@@ -36,12 +66,16 @@ export function StaffPortalContent({
   departments,
   courses,
   currentSemester,
+  currentSemesterId,
   userName,
   userEmail,
   avatarUrl,
   onGoToSection,
   onFetchRegisteredUsers,
   onSaveScore,
+  onFindScore,
+  onUpdateScore,
+  onFetchCourseScores,
   onUpdateName,
   onUpdatePassword,
   onUploadAvatar,
@@ -60,8 +94,32 @@ export function StaffPortalContent({
     return (
       <StaffGradingPage
         currentSemester={currentSemester}
+        currentSemesterId={currentSemesterId}
         onFetchRegisteredUsers={onFetchRegisteredUsers}
         onSaveScore={onSaveScore}
+        onBack={() => onGoToSection("overview")}
+      />
+    );
+  }
+
+  if (staffSection === "score-update") {
+    return (
+      <StaffUpdateScorePage
+        currentSemester={currentSemester}
+        currentSemesterId={currentSemesterId}
+        onFindScore={onFindScore}
+        onUpdateScore={onUpdateScore}
+        onBack={() => onGoToSection("overview")}
+      />
+    );
+  }
+
+  if (staffSection === "course-scores") {
+    return (
+      <StaffCourseScoresPage
+        currentSemester={currentSemester}
+        currentSemesterId={currentSemesterId}
+        onFetchCourseScores={onFetchCourseScores}
         onBack={() => onGoToSection("overview")}
       />
     );

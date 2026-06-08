@@ -5,6 +5,7 @@ import type { RegisteredCourseUserRow } from "../services/grading.api";
 
 type StaffGradingPageProps = {
   currentSemester: string;
+  currentSemesterId: string;
   onBack?: () => void;
   onFetchRegisteredUsers: (
     courseCode: string,
@@ -39,6 +40,7 @@ function computeGrade(total: number | null) {
 
 export function StaffGradingPage({
   currentSemester,
+  currentSemesterId,
   onBack,
   onFetchRegisteredUsers,
   onSaveScore,
@@ -73,9 +75,13 @@ export function StaffGradingPage({
       toast.error("Current semester is not set.");
       return;
     }
+    if (!currentSemesterId.trim()) {
+      toast.error("Current semester ID is not available.");
+      return;
+    }
 
     setIsFetching(true);
-    void onFetchRegisteredUsers(normalizedCourseCode, currentSemester)
+    void onFetchRegisteredUsers(normalizedCourseCode, currentSemesterId)
       .then((payload) => {
         setActiveCourse(payload.course);
         setRows(payload.registeredUsers);
@@ -91,7 +97,15 @@ export function StaffGradingPage({
           };
         });
         setDrafts(nextDrafts);
-        setSubmittedRows({});
+        setSubmittedRows(
+          payload.registeredUsers.reduce<Record<string, boolean>>(
+            (submitted, row) => ({
+              ...submitted,
+              [row.registrationId]: Boolean(row.scoreId),
+            }),
+            {},
+          ),
+        );
       })
       .catch((error) => {
         setRows([]);
@@ -131,6 +145,11 @@ export function StaffGradingPage({
 
   const saveRow = (row: RegisteredCourseUserRow) => {
     const draft = drafts[row.registrationId];
+    if (draft?.scoreId) {
+      toast.info("Score already submitted. Use the Update Score page.");
+      return;
+    }
+
     const testScore = Number(draft?.testScore);
     const examScore = Number(draft?.examScore);
 
@@ -208,16 +227,6 @@ export function StaffGradingPage({
         </div>
       </section>
 
-      <section className="dashboard-head">
-        {onBack && (
-          <div className="admin-head-actions">
-            <button type="button" className="secondary" onClick={onBack}>
-              Back to Staff Home
-            </button>
-          </div>
-        )}
-      </section>
-
       <section className="panel">
         <div className="section-title">
           <h3>Load Registered Students by Course</h3>
@@ -230,9 +239,14 @@ export function StaffGradingPage({
               placeholder="e.g. CSC301"
               value={courseCode}
               onChange={(event) => setCourseCode(event.target.value)}
+              required
             />
           </label>
-          <button type="submit" className="primary" disabled={isFetching}>
+          <button
+            type="submit"
+            className="primary"
+            disabled={isFetching || !courseCode.trim()}
+          >
             {isFetching ? "Loading..." : "Fetch Students"}
           </button>
         </form>
@@ -256,7 +270,9 @@ export function StaffGradingPage({
         <section className="panel grade-sheet-wrap">
           <div className="section-title">
             <h3>Course Roster</h3>
-            <span className="status-pill subtle">{totalRegistered} students</span>
+            <span className="status-pill subtle">
+              {totalRegistered} students
+            </span>
           </div>
           <div className="table-wrap">
             <table>
@@ -265,8 +281,8 @@ export function StaffGradingPage({
                   <th>Name</th>
                   <th>Matric No</th>
                   <th>Course Code</th>
-                  <th>Test (40)</th>
-                  <th>Exam (60)</th>
+                  <th>Test (30)</th>
+                  <th>Exam (70)</th>
                   <th>Total</th>
                   <th>Grade</th>
                   <th>Action</th>
@@ -291,13 +307,17 @@ export function StaffGradingPage({
                     <tr key={row.registrationId}>
                       <td>{row.name}</td>
                       <td>{row.matricNo}</td>
-                      <td>{activeCourse?.courseCode ?? courseCode.trim().toUpperCase()}</td>
+                      <td>
+                        {activeCourse?.courseCode ??
+                          courseCode.trim().toUpperCase()}
+                      </td>
                       <td>
                         <input
                           type="number"
                           min={0}
                           max={40}
                           value={draft.testScore}
+                          disabled={isSubmitted}
                           onChange={(event) =>
                             updateDraft(
                               row.registrationId,
@@ -313,6 +333,7 @@ export function StaffGradingPage({
                           min={0}
                           max={60}
                           value={draft.examScore}
+                          disabled={isSubmitted}
                           onChange={(event) =>
                             updateDraft(
                               row.registrationId,
@@ -327,7 +348,9 @@ export function StaffGradingPage({
                       <td>
                         <button
                           type="button"
-                          className={isSubmitted ? "secondary small" : "primary small"}
+                          className={
+                            isSubmitted ? "secondary small" : "primary small"
+                          }
                           onClick={() => saveRow(row)}
                           disabled={
                             savingRow === row.registrationId ||

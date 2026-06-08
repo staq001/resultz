@@ -6,7 +6,7 @@ type StaffOverviewPageProps = {
 
 const gradingChecklist = [
   "Load a course roster for the active semester.",
-  "Record test scores out of 40 and exam scores out of 60.",
+  "Record test scores out of 30 and exam scores out of 70.",
   "Review totals before publishing final marks.",
 ];
 
@@ -22,8 +22,8 @@ export function StaffOverviewPage({
           <p className="eyebrow">Staff Portal</p>
           <h2>Grade courses and keep assessment records in sync.</h2>
           <p className="sub">
-            Work from the current semester, load registered students per
-            course, and update scores from one focused grading space.
+            Work from the current semester, load registered students per course,
+            and update scores from one focused grading space.
           </p>
         </div>
         <div className="hero-badge">
@@ -61,27 +61,6 @@ export function StaffOverviewPage({
               <li key={item}>{item}</li>
             ))}
           </ul>
-        </article>
-
-        <article className="panel feature-panel">
-          <div className="section-title">
-            <h3>Semester Readiness</h3>
-            <span className="status-pill subtle">Live data</span>
-          </div>
-          <div className="mini-metrics">
-            <div>
-              <span>Current semester</span>
-              <strong>{currentSemester || "Not set"}</strong>
-            </div>
-            <div>
-              <span>Departments covered</span>
-              <strong>{departmentsCount}</strong>
-            </div>
-            <div>
-              <span>Courses loaded</span>
-              <strong>{coursesCount}</strong>
-            </div>
-          </div>
         </article>
       </section>
     </main>

@@ -16,10 +16,18 @@ export type AdminSection =
 export type StudentSection =
   | "overview"
   | "registration"
+  | "registered-courses"
   | "results"
+  | "result-sheet"
+  | "comprehensive-report"
   | "settings";
 
-export type StaffSection = "overview" | "grading" | "settings";
+export type StaffSection =
+  | "overview"
+  | "grading"
+  | "score-update"
+  | "course-scores"
+  | "settings";
 
 export type SidebarNavItem = {
   label: string;
@@ -62,6 +70,7 @@ export type AuthUserProfile = {
   email: string;
   matricNo?: string | null;
   department?: string | null;
+  entryYear?: number | null;
   avatar?: string | null;
   isAdmin: boolean;
   isStaff: boolean;
