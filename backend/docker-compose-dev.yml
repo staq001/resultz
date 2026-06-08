@@ -38,6 +38,7 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - BREVO_API_KEY=${BREVO_API_KEY}
       - BREVO_SENDER_EMAIL=${BREVO_SENDER_EMAIL}
+      - LOOKUP_MAX_ATTEMPTS=${LOOKUP_MAX_ATTEMPTS}
     healthcheck:
       test: ["CMD", "curl", "-f", "${API_URL}/health"]
       interval: 30s

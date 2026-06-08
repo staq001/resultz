@@ -38,7 +38,10 @@ app.use(
 );
 
 app.use("*", async (c, next) => {
-  if (c.req.path === "/api/v1/users/login") {
+  if (
+    c.req.path === "/api/v1/users/login" ||
+    c.req.path === "/api/v1/users/signup"
+  ) {
     await next();
     return;
   }

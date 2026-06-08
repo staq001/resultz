@@ -37,6 +37,7 @@ export async function validateCredentials(
         isAdmin: users.isAdmin,
         isStaff: users.isStaff,
         isRusticated: users.isRusticated,
+        isGraduated: users.isGraduated,
       })
       .from(users)
       .where(
@@ -68,7 +69,10 @@ export async function validateCredentials(
     if (user && user.password) {
       const isMatch = await verifyPassword(user.password, inputPassword);
       if (!isMatch) {
-        await recordFailure(lookupKey, 7); // lock account after 7 failed attempts.
+        await recordFailure(
+          lookupKey,
+          parseInt(Bun.env.LOOKUP_MAX_ATTEMPTS as string),
+        );
         throw new NotFound("Wrong email/matric number or password combination");
       }
       await recordSuccess(lookupKey);
