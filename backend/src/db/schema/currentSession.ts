@@ -8,5 +8,5 @@ export const currentSession = mysqlTable("current_session", {
     .default(sql`(uuid())`),
   currentSession: varchar("current_session", { length: 255 })
     .notNull()
-    .default("false"),
+    .default(""),
 });

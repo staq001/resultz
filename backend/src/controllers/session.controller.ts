@@ -77,6 +77,19 @@ export class SessionController {
     }
   };
 
+  unlockSession = async (c: LockSessionContext) => {
+    try {
+      const { sessionName } = c.req.valid("json");
+      await this.sessionService.unlockRegistration(sessionName);
+      return c.json({ message: "Session unlocked successfully" }, 200);
+    } catch (e: any) {
+      return c.json(
+        { message: e.message || "Internal Server Error" },
+        e.status || 500,
+      );
+    }
+  };
+
   getSessions = async (c: Context<AppEnv>) => {
     try {
       const sessions = await this.sessionService.getAllSessions();

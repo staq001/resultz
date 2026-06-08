@@ -12,6 +12,11 @@ import {
 import { currentSession } from "@/db/schema/currentSession";
 import { users } from "@/db/schema/user";
 
+const normalizeCurrentSessionName = (sessionName?: string | null) => {
+  const normalized = sessionName?.trim() ?? "";
+  return normalized && normalized !== "false" ? normalized : null;
+};
+
 export class SessionService {
   async createSession(sessionName: string) {
     try {
@@ -51,6 +56,18 @@ export class SessionService {
         .update(session)
         .set({ schoolSession: newSessionName })
         .where(eq(session.schoolSession, sessionName));
+
+      const [currentSchSession] = await db
+        .select()
+        .from(currentSession)
+        .limit(1);
+
+      if (currentSchSession?.currentSession === sessionName) {
+        await db
+          .update(currentSession)
+          .set({ currentSession: newSessionName })
+          .limit(1);
+      }
     } catch (e) {
       logger.error(`Error persisting session, ${e}`);
       if (e instanceof NotFound) throw e;
@@ -73,6 +90,8 @@ export class SessionService {
         .from(currentSession)
         .limit(1);
 
+      if (currentSchSession.currentSession ===sessionName ) throw new BadRequest("Invalid Operation. This is the current semester");
+
       if (!currentSchSession) {
         await db.insert(currentSession).values({
           currentSession: schSession.schoolSession,
@@ -87,6 +106,7 @@ export class SessionService {
     } catch (e) {
       logger.error(`Error persisting session, ${e}`);
       if (e instanceof NotFound) throw e;
+      if (e instanceof BadRequest) throw e;
       throw new InternalServerError(`Error persisting session`);
     }
   }
@@ -122,11 +142,36 @@ export class SessionService {
     }
   }
 
+  async unlockRegistration(sessionName: string) {
+    try {
+      const [schSession] = await db
+        .select({ id: session.id, schoolSession: session.schoolSession })
+        .from(session)
+        .where(eq(session.schoolSession, sessionName));
+
+      if (!schSession) throw new NotFound("Session not found");
+
+      await db
+        .update(session)
+        .set({
+          registration_status: "Open",
+        })
+        .where(eq(session.schoolSession, sessionName));
+    } catch (e) {
+      logger.error(`Error locking registration, ${e}`);
+      if (e instanceof NotFound) throw e;
+      throw new InternalServerError(`Error locking registration`);
+    }
+  }
+
   async getCurrentSession() {
     try {
       const [activeSession] = await db.select().from(currentSession);
+      const activeSessionName = normalizeCurrentSessionName(
+        activeSession?.currentSession,
+      );
 
-      if (!activeSession?.currentSession) return null;
+      if (!activeSessionName) return null;
 
       const [schSession] = await db
         .select({
@@ -134,7 +179,7 @@ export class SessionService {
           schoolSession: session.schoolSession,
         })
         .from(session)
-        .where(eq(session.schoolSession, activeSession.currentSession));
+        .where(eq(session.schoolSession, activeSessionName));
 
       if (!schSession) throw new NotFound("Current session was not found");
       return schSession;

@@ -12,6 +12,7 @@ const {
   setSession,
   getCurrentSession,
   lockSession,
+  unlockSession,
   getSessions,
 } = new SessionController();
 
@@ -37,6 +38,14 @@ app.put(
   adminProtectedRoute,
   zodValidator(lockSessionSchema),
   lockSession,
+);
+
+app.put(
+  "/sessions/unlock",
+  authentication,
+  adminProtectedRoute,
+  zodValidator(lockSessionSchema),
+  unlockSession,
 );
 
 app.put(
