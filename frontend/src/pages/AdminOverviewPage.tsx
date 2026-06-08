@@ -38,9 +38,9 @@ export function AdminOverviewPage({
           <p>Course records already mapped for registration and grading.</p>
         </article>
         <article className="stat-card">
-          <span>Semester status</span>
+          <span>Active Semester</span>
           <strong>{currentSemester || "Not set"}</strong>
-          <p>The live academic session visible to staff and students.</p>
+          <p>Semester used across grading and result views.</p>
         </article>
       </section>
 
@@ -52,30 +52,11 @@ export function AdminOverviewPage({
           </div>
           <ul className="feature-list">
             <li>Create departments before assigning courses.</li>
-            <li>Update course titles, codes, and units as curriculum changes.</li>
+            <li>
+              Update course titles, codes, and units as curriculum changes.
+            </li>
             <li>Set the current semester before grading starts.</li>
           </ul>
-        </article>
-
-        <article className="panel feature-panel">
-          <div className="section-title">
-            <h3>Platform Readiness</h3>
-            <span className="status-pill subtle">Snapshot</span>
-          </div>
-          <div className="mini-metrics">
-            <div>
-              <span>Department setup</span>
-              <strong>{departmentsCount > 0 ? "Ready" : "Pending"}</strong>
-            </div>
-            <div>
-              <span>Course catalogue</span>
-              <strong>{coursesCount > 0 ? "Loaded" : "Empty"}</strong>
-            </div>
-            <div>
-              <span>Semester control</span>
-              <strong>{currentSemester || "Not set"}</strong>
-            </div>
-          </div>
         </article>
       </section>
     </main>

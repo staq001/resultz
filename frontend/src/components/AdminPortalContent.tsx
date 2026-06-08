@@ -30,6 +30,8 @@ type AdminPortalContentProps = {
   onCreateSemester: (name: string) => Promise<void>;
   onSetSemester: (name: string) => Promise<void>;
   onUpdateSemester: (currentName: string, newName: string) => Promise<void>;
+  onLockSemester: (name: string) => Promise<void>;
+  onUnlockSemester: (name: string) => Promise<void>;
   onUpdateName: (name: string) => Promise<void>;
   onUpdatePassword: (password: string) => Promise<void>;
   onUploadAvatar: (file: File) => Promise<void>;
@@ -56,6 +58,8 @@ export function AdminPortalContent({
   onCreateSemester,
   onSetSemester,
   onUpdateSemester,
+  onLockSemester,
+  onUnlockSemester,
   onUpdateName,
   onUpdatePassword,
   onUploadAvatar,
@@ -106,6 +110,8 @@ export function AdminPortalContent({
         onCreateSemester={onCreateSemester}
         onSetSemester={onSetSemester}
         onUpdateSemester={onUpdateSemester}
+        onLockSemester={onLockSemester}
+        onUnlockSemester={onUnlockSemester}
         onBack={() => onGoToSection("overview")}
       />
     );

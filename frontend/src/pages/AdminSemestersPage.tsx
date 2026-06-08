@@ -8,7 +8,19 @@ type AdminSemestersPageProps = {
   onCreateSemester: (name: string) => Promise<void>;
   onSetSemester: (name: string) => Promise<void>;
   onUpdateSemester: (currentName: string, newName: string) => Promise<void>;
+  onLockSemester: (name: string) => Promise<void>;
+  onUnlockSemester: (name: string) => Promise<void>;
   onBack: () => void;
+};
+
+type SemesterAction = "create" | "set" | "update" | "lock" | "unlock";
+
+const initialBusyState: Record<SemesterAction, boolean> = {
+  create: false,
+  set: false,
+  update: false,
+  lock: false,
+  unlock: false,
 };
 
 export function AdminSemestersPage({
@@ -18,37 +30,38 @@ export function AdminSemestersPage({
   onCreateSemester,
   onSetSemester,
   onUpdateSemester,
+  onLockSemester,
+  onUnlockSemester,
   onBack,
 }: AdminSemestersPageProps) {
   const [newSemesterName, setNewSemesterName] = useState("");
-  const [selectedSemester, setSelectedSemester] = useState("");
-  const [renamingSemester, setRenamingSemester] = useState("");
-  const [replacementSemester, setReplacementSemester] = useState("");
-  const [isEditingCreate, setIsEditingCreate] = useState(false);
-  const [isEditingSet, setIsEditingSet] = useState(false);
-  const [isEditingUpdate, setIsEditingUpdate] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [isSetting, setIsSetting] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [semesterToSet, setSemesterToSet] = useState("");
+  const [semesterToUpdate, setSemesterToUpdate] = useState("");
+  const [updatedSemesterName, setUpdatedSemesterName] = useState("");
+  const [semesterForRegistrationStatus, setSemesterForRegistrationStatus] =
+    useState("");
+  const [busy, setBusy] = useState(initialBusyState);
   const toast = useToast();
 
-  const cancelCreateEdit = () => {
-    setNewSemesterName("");
-    setIsEditingCreate(false);
+  const runSemesterAction = async (
+    action: SemesterAction,
+    task: () => Promise<void>,
+    successMessage: string,
+  ) => {
+    setBusy((current) => ({ ...current, [action]: true }));
+    try {
+      await task();
+      toast.success(successMessage);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Semester request failed.",
+      );
+    } finally {
+      setBusy((current) => ({ ...current, [action]: false }));
+    }
   };
 
-  const cancelSetEdit = () => {
-    setSelectedSemester("");
-    setIsEditingSet(false);
-  };
-
-  const cancelUpdateEdit = () => {
-    setRenamingSemester("");
-    setReplacementSemester("");
-    setIsEditingUpdate(false);
-  };
-
-  const submitCreate = async (event: React.FormEvent) => {
+  const submitCreate = (event: React.FormEvent) => {
     event.preventDefault();
     const trimmed = newSemesterName.trim();
     if (!trimmed) {
@@ -56,80 +69,97 @@ export function AdminSemestersPage({
       return;
     }
 
-    setIsCreating(true);
-    try {
-      await onCreateSemester(trimmed);
-      setNewSemesterName("");
-      if (!selectedSemester) setSelectedSemester(trimmed);
-      if (!renamingSemester) setRenamingSemester(trimmed);
-      setIsEditingCreate(false);
-      toast.success("Semester added successfully.");
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Could not add semester.",
-      );
-    } finally {
-      setIsCreating(false);
-    }
+    void runSemesterAction(
+      "create",
+      async () => {
+        await onCreateSemester(trimmed);
+        setNewSemesterName("");
+      },
+      "Semester created successfully.",
+    );
   };
 
-  const submitSet = async (event: React.FormEvent) => {
+  const submitSet = (event: React.FormEvent) => {
     event.preventDefault();
-    const targetSemester = selectedSemester.trim();
-    if (!targetSemester) {
-      toast.error("Select or enter a semester to set.");
+    const trimmed = semesterToSet.trim();
+    if (!trimmed) {
+      toast.error("Select a semester to set.");
       return;
     }
 
-    setIsSetting(true);
-    try {
-      await onSetSemester(targetSemester);
-      setIsEditingSet(false);
-      toast.success(`Current semester set to ${targetSemester}.`);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Could not set semester.",
-      );
-    } finally {
-      setIsSetting(false);
-    }
+    void runSemesterAction(
+      "set",
+      () => onSetSemester(trimmed),
+      `Current semester set to ${trimmed}.`,
+    );
   };
 
-  const submitUpdate = async (event: React.FormEvent) => {
+  const submitUpdate = (event: React.FormEvent) => {
     event.preventDefault();
-    const sourceSemester = renamingSemester.trim();
-    const targetSemester = replacementSemester.trim();
+    const currentName = semesterToUpdate.trim();
+    const nextName = updatedSemesterName.trim();
 
-    if (!sourceSemester) {
-      toast.error("Select a semester to rename.");
+    if (!currentName) {
+      toast.error("Select a semester to update.");
       return;
     }
 
-    if (!targetSemester) {
-      toast.error("Enter the new semester name.");
+    if (!nextName) {
+      toast.error("Enter the replacement semester name.");
       return;
     }
 
-    setIsUpdating(true);
-    try {
-      await onUpdateSemester(sourceSemester, targetSemester);
-      setRenamingSemester("");
-      setReplacementSemester("");
-      setIsEditingUpdate(false);
-      toast.success(`Semester renamed to ${targetSemester}.`);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Could not rename semester.",
-      );
-    } finally {
-      setIsUpdating(false);
-    }
+    void runSemesterAction(
+      "update",
+      async () => {
+        await onUpdateSemester(currentName, nextName);
+        setSemesterToUpdate("");
+        setUpdatedSemesterName("");
+      },
+      "Semester updated successfully.",
+    );
   };
+
+  const submitLock = (event: React.FormEvent) => {
+    event.preventDefault();
+    const trimmed = semesterForRegistrationStatus.trim();
+    if (!trimmed) {
+      toast.error("Select a semester.");
+      return;
+    }
+
+    void runSemesterAction(
+      "lock",
+      () => onLockSemester(trimmed),
+      `Registration locked for ${trimmed}.`,
+    );
+  };
+
+  const submitUnlock = () => {
+    const trimmed = semesterForRegistrationStatus.trim();
+    if (!trimmed) {
+      toast.error("Select a semester.");
+      return;
+    }
+
+    void runSemesterAction(
+      "unlock",
+      () => onUnlockSemester(trimmed),
+      `Registration unlocked for ${trimmed}.`,
+    );
+  };
+
+  const isBusy = Object.values(busy).some(Boolean) || isLoadingSemesterData;
 
   return (
-    <main className="dashboard-wrap">
+    <main className="dashboard-wrap page-stack">
       <section className="dashboard-head">
-        <h2>Semesters</h2>
+        <div>
+          <h2>Semesters</h2>
+          <p className="sub">
+            Create, update, set, and lock academic sessions.
+          </p>
+        </div>
         <div className="admin-head-actions">
           <button type="button" className="secondary" onClick={onBack}>
             Back to Admin Home
@@ -137,202 +167,104 @@ export function AdminSemestersPage({
         </div>
       </section>
 
-      <section className="panel settings-inline-panel semesters-inline-panel">
-        <h3>Semester Controls</h3>
+      <section className="semester-action-grid">
+        <form className="panel semester-action-card" onSubmit={submitCreate}>
+          <h3>Create Semester</h3>
+          <label>
+            Semester name
+            <input
+              value={newSemesterName}
+              onChange={(event) => setNewSemesterName(event.target.value)}
+              placeholder="2025/2026 Rain"
+            />
+          </label>
+          <button className="primary" type="submit" disabled={isBusy}>
+            {busy.create ? "Creating..." : "Create Semester"}
+          </button>
+        </form>
 
-        {isLoadingSemesterData && (
-          <div className="loading-inline">
-            <span className="inline-spinner" aria-hidden="true" />
-            <p className="sub">Loading sessions...</p>
-          </div>
-        )}
+        <form className="panel semester-action-card" onSubmit={submitSet}>
+          <h3>Set Current Semester</h3>
+          <label>
+            Semester
+            <select
+              value={semesterToSet}
+              onChange={(event) => setSemesterToSet(event.target.value)}
+            >
+              <option value="">Select semester</option>
+              {semesters.map((semester) => (
+                <option key={semester} value={semester}>
+                  {semester}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="primary" type="submit" disabled={isBusy}>
+            {busy.set ? "Setting..." : "Set Current"}
+          </button>
+        </form>
 
-        <div className="settings-inline-row">
-          <div className="settings-inline-meta">
-            <strong>Add Semester</strong>
-          </div>
-          <div className="settings-inline-control">
-            {isEditingCreate ? (
-              <form
-                className="settings-inline-edit-stack"
-                onSubmit={submitCreate}
-              >
-                <input
-                  value={newSemesterName}
-                  onChange={(event) => setNewSemesterName(event.target.value)}
-                  placeholder="2025/2026 Harmattan"
-                />
-                <div className="settings-inline-actions-row">
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={cancelCreateEdit}
-                    disabled={isCreating || isLoadingSemesterData}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="primary"
-                    disabled={isCreating || isLoadingSemesterData}
-                  >
-                    {isCreating ? (
-                      <span className="button-with-spinner">
-                        <span className="inline-spinner" aria-hidden="true" />
-                        Adding...
-                      </span>
-                    ) : (
-                      "Save changes"
-                    )}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="settings-inline-view-stack">
-                <input value="Create a new semester" readOnly />
-                <div className="settings-inline-actions-row">
-                  <button
-                    type="button"
-                    className="ghost settings-inline-link"
-                    onClick={() => setIsEditingCreate(true)}
-                  >
-                    Edit
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <form className="panel semester-action-card" onSubmit={submitUpdate}>
+          <h3>Update Semester</h3>
+          <label>
+            Existing semester
+            <select
+              value={semesterToUpdate}
+              onChange={(event) => setSemesterToUpdate(event.target.value)}
+            >
+              <option value="">Select semester</option>
+              {semesters.map((semester) => (
+                <option key={semester} value={semester}>
+                  {semester}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            New semester name
+            <input
+              value={updatedSemesterName}
+              onChange={(event) => setUpdatedSemesterName(event.target.value)}
+              placeholder="2025/2026 Harmattan"
+            />
+          </label>
+          <button className="primary" type="submit" disabled={isBusy}>
+            {busy.update ? "Updating..." : "Update Semester"}
+          </button>
+        </form>
 
-        <div className="settings-inline-row">
-          <div className="settings-inline-meta">
-            <strong>Set Current Semester</strong>
+        <form className="panel semester-action-card" onSubmit={submitLock}>
+          <h3>Registration Status</h3>
+          <label>
+            Semester
+            <select
+              value={semesterForRegistrationStatus}
+              onChange={(event) =>
+                setSemesterForRegistrationStatus(event.target.value)
+              }
+            >
+              <option value="">Select semester</option>
+              {semesters.map((semester) => (
+                <option key={semester} value={semester}>
+                  {semester}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="semester-status-actions">
+            <button className="danger" type="submit" disabled={isBusy}>
+              {busy.lock ? "Locking..." : "Lock Registration"}
+            </button>
+            <button
+              className="secondary"
+              type="button"
+              disabled={isBusy}
+              onClick={submitUnlock}
+            >
+              {busy.unlock ? "Unlocking..." : "Unlock Registration"}
+            </button>
           </div>
-          <div className="settings-inline-control">
-            {isEditingSet ? (
-              <form className="settings-inline-edit-stack" onSubmit={submitSet}>
-                <select
-                  value={selectedSemester}
-                  onChange={(event) => setSelectedSemester(event.target.value)}
-                >
-                  <option value="">Select semester</option>
-                  {semesters.map((semester) => (
-                    <option key={semester} value={semester}>
-                      {semester}
-                    </option>
-                  ))}
-                </select>
-                <div className="settings-inline-actions-row">
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={cancelSetEdit}
-                    disabled={isSetting || isLoadingSemesterData}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="primary"
-                    disabled={isSetting || isLoadingSemesterData}
-                  >
-                    {isSetting ? (
-                      <span className="button-with-spinner">
-                        <span className="inline-spinner" aria-hidden="true" />
-                        Setting...
-                      </span>
-                    ) : (
-                      "Save changes"
-                    )}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="settings-inline-view-stack">
-                <input value={currentSemester || "Not set"} readOnly />
-                <div className="settings-inline-actions-row">
-                  <button
-                    type="button"
-                    className="ghost settings-inline-link"
-                    onClick={() => setIsEditingSet(true)}
-                  >
-                    Edit
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="settings-inline-row">
-          <div className="settings-inline-meta">
-            <strong>Update Semester</strong>
-          </div>
-          <div className="settings-inline-control">
-            {isEditingUpdate ? (
-              <form
-                className="settings-inline-edit-stack"
-                onSubmit={submitUpdate}
-              >
-                <select
-                  value={renamingSemester}
-                  onChange={(event) => setRenamingSemester(event.target.value)}
-                >
-                  <option value="">Select semester to rename</option>
-                  {semesters.map((semester) => (
-                    <option key={semester} value={semester}>
-                      {semester}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  value={replacementSemester}
-                  onChange={(event) =>
-                    setReplacementSemester(event.target.value)
-                  }
-                  placeholder="New semester name"
-                />
-                <div className="settings-inline-actions-row">
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={cancelUpdateEdit}
-                    disabled={isUpdating || isLoadingSemesterData}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="primary"
-                    disabled={isUpdating || isLoadingSemesterData}
-                  >
-                    {isUpdating ? (
-                      <span className="button-with-spinner">
-                        <span className="inline-spinner" aria-hidden="true" />
-                        Updating...
-                      </span>
-                    ) : (
-                      "Save changes"
-                    )}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="settings-inline-view-stack">
-                <input value="Rename an existing semester" readOnly />
-                <div className="settings-inline-actions-row">
-                  <button
-                    type="button"
-                    className="ghost settings-inline-link"
-                    onClick={() => setIsEditingUpdate(true)}
-                  >
-                    Edit
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        </form>
       </section>
     </main>
   );
