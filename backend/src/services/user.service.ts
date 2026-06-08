@@ -1,11 +1,12 @@
 import { randomUUID } from "crypto";
-import { desc, eq, getTableColumns } from "drizzle-orm";
+import { desc, eq, getTableColumns, sql } from "drizzle-orm";
 import { v2 as cloudinary } from "cloudinary";
 import { encodeBase64 } from "hono/utils/encode";
 
 import { createHash, verifyHash } from "../utils/index";
 import { db } from "../db/mysql";
 import { users } from "../db/schema/user";
+import { departments } from "../db/schema/department";
 import { validateCredentials } from "@/db/validateCredentials";
 import { logger } from "../utils/logger";
 import type {
@@ -52,6 +53,18 @@ export class UserService implements US {
 
       if (findExistingEmail?.email === payload.email)
         throw new Conflict("A User with this email already exists");
+
+      if (payload.department) {
+        const deptName = payload.department.trim();
+        const [foundDept] = await db
+          .select()
+          .from(departments)
+          .where(sql`LOWER(${departments.name}) = ${deptName.toLowerCase()}`);
+
+        if (!foundDept) {
+          throw new BadRequest("Department does not exist");
+        }
+      }
 
       const { values } = await this.insertWithContext(users, {
         ...payload,

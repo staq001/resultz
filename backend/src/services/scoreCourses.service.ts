@@ -258,6 +258,7 @@ export class Scores {
           department: users.department,
           entryYear: users.entryYear,
           isRusticated: users.isRusticated,
+          isGraduated: users.isGraduated,
           faculty: departments.faculty,
         })
         .from(scoreCourses)
@@ -288,8 +289,17 @@ export class Scores {
         getSessionStartYear(a.sessionName) - getSessionStartYear(b.sessionName);
       if (sessionDiff !== 0) return sessionDiff;
 
-      const semesterDiff =
-        getSemesterOrder(a.semesterTerm) - getSemesterOrder(b.semesterTerm);
+      const termA = /harmattan$/i.test(a.sessionName.trim())
+        ? "Harmattan"
+        : /rain$/i.test(a.sessionName.trim())
+          ? "Rain"
+          : a.semesterTerm;
+      const termB = /harmattan$/i.test(b.sessionName.trim())
+        ? "Harmattan"
+        : /rain$/i.test(b.sessionName.trim())
+          ? "Rain"
+          : b.semesterTerm;
+      const semesterDiff = getSemesterOrder(termA) - getSemesterOrder(termB);
       if (semesterDiff !== 0) return semesterDiff;
 
       return a.courseCode.localeCompare(b.courseCode);
@@ -322,7 +332,13 @@ export class Scores {
     >();
 
     for (const row of rows) {
-      const key = `${row.sessionName}-${row.semesterTerm}`;
+      const sessionNameTrim = row.sessionName.trim();
+      const effectiveTerm = /harmattan$/i.test(sessionNameTrim)
+        ? "Harmattan"
+        : /rain$/i.test(sessionNameTrim)
+          ? "Rain"
+          : row.semesterTerm;
+      const key = `${row.sessionName}-${effectiveTerm}`;
       const totalScore = row.testScore + row.examScore;
       const gradePoint = gradePoints[row.grade] ?? 0;
       const creditPoint = row.units * gradePoint;
@@ -331,8 +347,8 @@ export class Scores {
         semesterMap.set(key, {
           semesterId: row.semesterId,
           sessionName: row.sessionName,
-          semesterTerm: row.semesterTerm,
-          semesterLabel: getSemesterLabel(row.semesterTerm),
+          semesterTerm: effectiveTerm,
+          semesterLabel: getSemesterLabel(effectiveTerm),
           yearLabel: row.sessionName,
           courses: [],
         });
@@ -387,6 +403,7 @@ export class Scores {
         entryYear: student.entryYear,
         faculty: student.faculty,
         isRusticated: student.isRusticated,
+        isGraduated: student.isGraduated,
       },
       semesters,
       summary: {

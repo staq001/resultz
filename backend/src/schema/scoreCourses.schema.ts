@@ -4,9 +4,9 @@ export const scoreCourseSchema = z.object({
   examScore: z
     .number()
     .min(0, "Exam score cannot be less than 0")
-    .max(70, "Exam score cannot be greater than 60"),
+    .max(70, "Exam score cannot be greater than 70"),
   testScore: z
     .number()
     .min(0, "Test score cannot be less than 0")
-    .max(30, "Test score cannot be greater than 40"),
+    .max(30, "Test score cannot be greater than 30"),
 });

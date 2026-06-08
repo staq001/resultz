@@ -171,8 +171,8 @@ export class CourseService implements CS {
   }
   private getSessionTerm(sessionName: string): semesterEnum {
     const normalized = sessionName.trim();
-    if (normalized.endsWith("Rain")) return "Rain";
-    if (normalized.endsWith("Harmattan")) return "Harmattan";
+    if (/rain$/i.test(normalized)) return "Rain";
+    if (/harmattan$/i.test(normalized)) return "Harmattan";
     throw new BadRequest("Current session term is invalid");
   }
 

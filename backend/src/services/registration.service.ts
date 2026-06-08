@@ -10,9 +10,9 @@ import { logger } from "@/utils/logger";
 
 export class Registration {
   private getSessionTerm(sessionName: string) {
-    const normalized = sessionName.trim();
-    if (normalized.endsWith("Rain")) return "Rain";
-    if (normalized.endsWith("Harmattan")) return "Harmattan";
+    const normalized = (sessionName || "").trim();
+    if (/rain$/i.test(normalized)) return "Rain";
+    if (/harmattan$/i.test(normalized)) return "Harmattan";
     throw new BadRequest("Current session term is invalid");
   }
 
@@ -201,7 +201,7 @@ export class Registration {
       if (!registeredCourse) throw new NotFound("Registered course not found");
 
       const sessionDetails = await db.query.session.findFirst({
-        where: eq(session.schoolSession, registeredCourse.semester),
+        where: eq(session.id, registeredCourse.semester),
       });
       if (!sessionDetails) throw new NotFound("Session details not found");
       if (sessionDetails.registration_status === "Locked") {
