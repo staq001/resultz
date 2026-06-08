@@ -117,6 +117,23 @@ export class DepartmentController {
     }
   };
 
+  getDepartmentNames = async (c: Context) => {
+    try {
+      const departmentNames = await this.departmentService.getDepartmentNames();
+      return c.json(
+        {
+          status: 200,
+
+          message: "Department names fetched successfully!",
+          data: { departmentNames },
+        },
+        200,
+      );
+    } catch (e: any) {
+      return c.json({ message: e.message }, e.status || 500);
+    }
+  };
+
   deleteDepartment = async (c: Context) => {
     const departmentId = c.req.param("departmentId");
 

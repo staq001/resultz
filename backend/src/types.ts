@@ -352,5 +352,6 @@ export type comprehensiveReportRows = {
   department: string | null;
   entryYear: number | null;
   isRusticated: boolean | null;
+  isGraduated: boolean | null;
   faculty: string;
 }[];

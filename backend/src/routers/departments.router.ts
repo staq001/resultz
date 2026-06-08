@@ -17,6 +17,7 @@ const {
   getDepartment,
   getAllDepartments,
   getDepartmentByFaculty,
+  getDepartmentNames,
   deleteDepartment,
 } = new DepartmentController();
 
@@ -36,18 +37,20 @@ app.put(
   updateDepartment,
 );
 
-app.get(
-  "/departments/:departmentId",
-  authentication,
-  adminProtectedRoute,
-  getDepartment,
-);
+app.get("/departments/names", getDepartmentNames);
 
 app.get(
   "/departments/faculty",
   authentication,
   adminProtectedRoute,
   getDepartmentByFaculty,
+);
+
+app.get(
+  "/departments/:departmentId",
+  authentication,
+  adminProtectedRoute,
+  getDepartment,
 );
 
 app.get(

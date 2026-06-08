@@ -150,6 +150,19 @@ export class DepartmentService implements DS {
     }
   }
 
+  async getDepartmentNames() {
+    try {
+      const departmentNames = await db
+        .select({ name: departments.name })
+        .from(departments);
+
+      return departmentNames;
+    } catch (e) {
+      logger.error(`Error fetching department names, ${e}`);
+      throw new InternalServerError("Error fetching department names");
+    }
+  }
+
   async deleteDepartment(departmentId: string) {
     try {
       await db.delete(departments).where(eq(departments.id, departmentId));
