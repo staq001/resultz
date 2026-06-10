@@ -22,15 +22,13 @@ const addMailToQueue = async (data: EmailPayload) => {
   });
 };
 
-emailQueue.process(async (job: Job, done) => {
+emailQueue.process(async (job: Job) => {
   try {
     await email.sendMail(job.data);
-    job.log("Email sent successfully to " + job.data.to);
+    job.log("Email sent successfully to " + job.data.toEmail);
     logger.info("Email sent successfully!");
   } catch (e) {
     throw e;
-  } finally {
-    done();
   }
 });
 

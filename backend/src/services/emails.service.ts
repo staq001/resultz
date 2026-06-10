@@ -19,7 +19,7 @@ export class EmailService {
   }
 
   async queueEmail(payload: EmailQueuePayload) {
-    const newMail = await this.insertWithContext(emails, payload);
+    await this.insertWithContext(emails, payload);
 
     const data = {
       title: payload.variables?.title,
@@ -63,22 +63,21 @@ export class EmailService {
     };
 
     const variables = { ...data, ...(payload.variables || {}) };
+    const senderEmail = Bun.env.BREVO_SENDER_EMAIL as string;
 
     const emailContent = {
-      from: process.env.SMTP_USER as string,
+      from: senderEmail,
       toEmail: payload.recipient,
       subject: data.title || payload.templateId,
       html: renderTemplate(payload.templateId, variables),
     };
 
     await addMailToQueue(emailContent);
-    return newMail;
   }
 
   private async insertWithContext(table: Table, values: Values) {
     try {
-      const result = await db.insert(table).values(values);
-      return { result, values };
+      await db.insert(table).values(values);
     } catch (e) {
       throw e;
     }

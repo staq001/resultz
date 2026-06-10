@@ -48,6 +48,7 @@ function renderTemplate(templateName: string, variables: {}) {
   const newData = { ...data, ...variables };
   const templateSource = fs.readFileSync(
     path.join(__dirname, "templates", `${templateName}.hbs`),
+    "utf-8",
   );
   const template = Handlebars.compile(templateSource);
   return template(newData);
