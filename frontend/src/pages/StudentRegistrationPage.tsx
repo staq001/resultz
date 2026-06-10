@@ -4,26 +4,31 @@ import type { Course } from "../types/app.types";
 
 type StudentRegistrationPageProps = {
   currentSemester: string;
+  currentLevel: number | null;
   courses: Course[];
   registeredCourseCodes: string[];
+  isLoadingCourses: boolean;
   onRegisterCourse: (code: string) => Promise<void>;
+  onSearchCourse: (code: string) => Promise<Course>;
 };
 
 export function StudentRegistrationPage({
   currentSemester,
+  currentLevel,
   courses,
   registeredCourseCodes,
+  isLoadingCourses,
   onRegisterCourse,
+  onSearchCourse,
 }: StudentRegistrationPageProps) {
   const [savingCourseCode, setSavingCourseCode] = useState<string | null>(null);
+  const [searchCode, setSearchCode] = useState("");
+  const [searchedCourse, setSearchedCourse] = useState<Course | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
   const toast = useToast();
   const maxRegistrationCount = 12;
-  const registeredCourses = courses.filter((course) =>
-    registeredCourseCodes.includes(course.code),
-  );
-  const totalUnits = registeredCourses.reduce(
-    (sum, course) => sum + course.unit,
-    0,
+  const normalizedRegisteredCourseCodes = new Set(
+    registeredCourseCodes.map((code) => code.trim().toUpperCase()),
   );
   const hasReachedRegistrationLimit =
     registeredCourseCodes.length >= maxRegistrationCount;
@@ -36,9 +41,7 @@ export function StudentRegistrationPage({
       })
       .catch((error) => {
         toast.error(
-          error instanceof Error
-            ? error.message
-            : "Unable to register course.",
+          error instanceof Error ? error.message : "Unable to register course.",
         );
       })
       .finally(() => {
@@ -46,86 +49,47 @@ export function StudentRegistrationPage({
       });
   };
 
+  const submitCourseSearch = () => {
+    const normalizedSearchCode = searchCode.trim().toUpperCase();
+    if (!normalizedSearchCode) {
+      toast.error("Enter a course code to search.");
+      return;
+    }
+
+    setIsSearching(true);
+    void onSearchCourse(normalizedSearchCode)
+      .then((course) => {
+        setSearchedCourse(course);
+      })
+      .catch((error) => {
+        setSearchedCourse(null);
+        toast.error(
+          error instanceof Error ? error.message : "Unable to find course.",
+        );
+      })
+      .finally(() => {
+        setIsSearching(false);
+      });
+  };
+
   return (
     <main className="dashboard-wrap page-stack">
-      <section className="hero-banner compact">
-        <div>
-          <p className="eyebrow">Course Registration</p>
-          <h2>Build a clean semester course load.</h2>
-          <p className="sub">
-            Register approved courses, keep an eye on total units, and review
-            your selected courses before submission.
-          </p>
-        </div>
-        <div className="hero-badge">
-          <span className="status-pill">Registered</span>
-          <strong>
-            {registeredCourses.length} course
-            {registeredCourses.length === 1 ? "" : "s"}
-          </strong>
-        </div>
-      </section>
-
-      <section className="stats-grid stats-grid-3">
-        <article className="stat-card">
-          <span>Selected courses</span>
-          <strong>{registeredCourses.length}</strong>
-          <p>Your current semester load before final submission.</p>
-        </article>
-        <article className="stat-card">
-          <span>Registration limit</span>
-          <strong>{maxRegistrationCount}</strong>
-          <p>Maximum number of courses allowed for one semester.</p>
-        </article>
-        <article className="stat-card">
-          <span>Total units</span>
-          <strong>{totalUnits}</strong>
-          <p>Total credit units across selected courses.</p>
-        </article>
-      </section>
-
-      <section className="content-grid content-grid-2">
-        <article className="panel feature-panel">
-          <div className="section-title">
-            <h3>Registration Guide</h3>
-            <span className="status-pill subtle">Checklist</span>
-          </div>
-          <ul className="feature-list">
-            <li>Only courses for your course of study and current level are shown.</li>
-            <li>Only courses in the active semester term are available here.</li>
-            <li>You can register up to 12 courses in one semester.</li>
-          </ul>
-        </article>
-
-        <article className="panel feature-panel">
-          <div className="section-title">
-            <h3>Selected Courses</h3>
-            <span className="status-pill subtle">Preview</span>
-          </div>
-          {registeredCourses.length > 0 ? (
-            <div className="chip-list">
-              {registeredCourses.map((course) => (
-                <span key={course.code} className="course-chip">
-                  {course.code} | {course.unit} unit
-                  {course.unit === 1 ? "" : "s"}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="sub">
-              No courses registered yet. Use the table below to start your
-              registration.
-            </p>
-          )}
-        </article>
-      </section>
-
       <section className="panel">
         <div className="section-title">
           <h3>Eligible Courses</h3>
-          <span className="status-pill subtle">Interactive</span>
+          <span className="status-pill subtle">
+            {currentSemester || "Semester not set"}
+          </span>
         </div>
-        <p className="sub">Active semester: {currentSemester || "Not set"}</p>
+        <p className="sub">
+          {currentLevel
+            ? `${currentLevel} Level default course registration list.`
+            : "Default course registration list."}
+        </p>
+
+        {isLoadingCourses && (
+          <p className="sub table-empty">Loading eligible courses...</p>
+        )}
         <div className="table-wrap">
           <table>
             <thead>
@@ -139,7 +103,9 @@ export function StudentRegistrationPage({
             </thead>
             <tbody>
               {courses.map((course) => {
-                const isRegistered = registeredCourseCodes.includes(course.code);
+                const normalizedCourseCode = course.code.trim().toUpperCase();
+                const isRegistered =
+                  normalizedRegisteredCourseCodes.has(normalizedCourseCode);
                 const isSaving = savingCourseCode === course.code;
                 const disableRegister =
                   isRegistered || isSaving || hasReachedRegistrationLimit;
@@ -152,7 +118,9 @@ export function StudentRegistrationPage({
                     <td>
                       <button
                         type="button"
-                        className={isRegistered ? "secondary small" : "primary small"}
+                        className={
+                          isRegistered ? "secondary small" : "primary small"
+                        }
                         onClick={() => submitCourseRegistration(course.code)}
                         disabled={disableRegister}
                       >
@@ -181,6 +149,92 @@ export function StudentRegistrationPage({
             semester.
           </p>
         )}
+
+        <section className="course-search-panel">
+          <h4>Search another course</h4>
+          <div className="course-search-row">
+            <input
+              value={searchCode}
+              onChange={(event) => setSearchCode(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  submitCourseSearch();
+                }
+              }}
+              placeholder="e.g. CSC 301"
+              aria-label="Search another course by course code"
+            />
+            <button
+              type="button"
+              className="primary"
+              onClick={submitCourseSearch}
+              disabled={isSearching}
+            >
+              {isSearching ? "Searching..." : "Search"}
+            </button>
+          </div>
+
+          {searchedCourse ? (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Title</th>
+                    <th>Department</th>
+                    <th>Semester</th>
+                    <th>Level</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>{searchedCourse.code}</td>
+                    <td>{searchedCourse.title}</td>
+                    <td>{searchedCourse.department}</td>
+                    <td>{searchedCourse.semester}</td>
+                    <td>{searchedCourse.level}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className={
+                          normalizedRegisteredCourseCodes.has(
+                            searchedCourse.code.trim().toUpperCase(),
+                          )
+                            ? "secondary small"
+                            : "primary small"
+                        }
+                        onClick={() =>
+                          submitCourseRegistration(searchedCourse.code)
+                        }
+                        disabled={
+                          normalizedRegisteredCourseCodes.has(
+                            searchedCourse.code.trim().toUpperCase(),
+                          ) ||
+                          savingCourseCode === searchedCourse.code ||
+                          hasReachedRegistrationLimit
+                        }
+                      >
+                        {savingCourseCode === searchedCourse.code
+                          ? "Registering..."
+                          : normalizedRegisteredCourseCodes.has(
+                                searchedCourse.code.trim().toUpperCase(),
+                              )
+                            ? "Registered"
+                            : "Register"}
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="sub">
+              Search for any other course you want outside your department.
+            </p>
+          )}
+        </section>
       </section>
     </main>
   );
