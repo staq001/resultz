@@ -22,30 +22,44 @@ import {
 } from "./services/user.api";
 import {
   createDepartment as createDepartmentApi,
+  fetchDepartmentNames,
   fetchDepartments,
   updateDepartment as updateDepartmentApi,
   type DepartmentRecord,
 } from "./services/departments.api";
 import {
   createCourse as createCourseApi,
+  fetchAvailableCoursesForStudent,
   fetchCoursesByDepartment,
+  searchCourseByCode,
   updateCourse as updateCourseApi,
   type CourseRecord,
 } from "./services/courses.api";
 import {
+  dropRegisteredCourse as dropRegisteredCourseApi,
   fetchRegisteredCoursesBySemester as fetchRegisteredCoursesBySemesterApi,
   registerStudentCourse as registerStudentCourseApi,
+  type RegistrationRow,
 } from "./services/registration.api";
 import {
+  fetchStudentComprehensiveReport,
+  fetchStudentScoresBySemester,
+  type ComprehensiveReport,
+  type StudentScoreRecord,
+} from "./services/results.api";
+import {
   createSemester as createSemesterApi,
-  fetchCurrentSemester as fetchCurrentSemesterApi,
+  fetchCurrentSemesterRecord as fetchCurrentSemesterRecordApi,
   fetchSemesters as fetchSemestersApi,
+  lockSemester as lockSemesterApi,
   setSemester as setSemesterApi,
+  unlockSemester as unlockSemesterApi,
   updateSemester as updateSemesterApi,
 } from "./services/semester.api";
 import {
   createCourseScore,
   fetchRegisteredUsersForCourse as fetchRegisteredUsersForCourseApi,
+  fetchScoresForCourse as fetchScoresForCourseApi,
   updateCourseScore,
 } from "./services/grading.api";
 import { AuthPage } from "./pages/AuthPage";
@@ -98,10 +112,12 @@ function App() {
 
   const [authMatricNo, setAuthMatricNo] = useState("");
   const [authDepartment, setAuthDepartment] = useState("");
+  const [authEntryYear, setAuthEntryYear] = useState("");
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isBootstrappingAuth, setIsBootstrappingAuth] = useState(true);
+  const [signupDepartments, setSignupDepartments] = useState<string[]>([]);
   const toast = useToast();
   const [departmentRecords, setDepartmentRecords] = useState<
     DepartmentRecord[]
@@ -110,8 +126,28 @@ function App() {
     Array<CourseRecord & { departmentName: string }>
   >([]);
   const [currentSemester, setCurrentSemester] = useState("Not set");
+  const [currentSemesterId, setCurrentSemesterId] = useState("");
+  const [currentSemesterTerm, setCurrentSemesterTerm] = useState<
+    "Rain" | "Harmattan" | null
+  >(null);
+  const [registeredCourses, setRegisteredCourses] = useState<RegistrationRow[]>(
+    [],
+  );
+  const [studentResults, setStudentResults] = useState<StudentScoreRecord[]>(
+    [],
+  );
+  const [studentComprehensiveReport, setStudentComprehensiveReport] =
+    useState<ComprehensiveReport | null>(null);
+  const [currentStudentLevel, setCurrentStudentLevel] = useState<number | null>(
+    null,
+  );
   const [managedSemesters, setManagedSemesters] = useState<string[]>([]);
+  const [isLoadingAdminData, setIsLoadingAdminData] = useState(true);
   const [isLoadingSemesterData, setIsLoadingSemesterData] = useState(false);
+  const [isLoadingStudentCourses, setIsLoadingStudentCourses] = useState(false);
+  const [isLoadingStudentResults, setIsLoadingStudentResults] = useState(false);
+  const [isLoadingComprehensiveReport, setIsLoadingComprehensiveReport] =
+    useState(false);
 
   const {
     departments,
@@ -119,49 +155,11 @@ function App() {
     registeredCourseCodes,
     newCourse,
     semesters,
-    activeSemester,
-    semesterResults,
-    currentGpa,
-    currentCgpa,
     setDepartments,
     setCourses,
     setRegisteredCourseCodes,
     setNewCourse,
-    setActiveSemester,
   } = useAcademicData();
-
-  const getSemesterTerm = (
-    semesterName: string,
-  ): "Rain" | "Harmattan" | null => {
-    const normalized = semesterName.trim().toLowerCase();
-    if (normalized.includes("rain")) return "Rain";
-    if (normalized.includes("harmattan")) return "Harmattan";
-    return null;
-  };
-
-  const getStudentLevelFromMatricAndSemester = (
-    matricNo: string,
-    semesterName: string,
-  ) => {
-    const segments = matricNo
-      .split("/")
-      .map((segment) => segment.trim())
-      .filter(Boolean);
-    const entrySegment = segments[2] ?? "";
-    const entryYearMatch = entrySegment.match(/(\d{2})/);
-    const sessionMatch = semesterName.match(/(\d{2,4})\s*\/\s*(\d{2,4})/);
-
-    if (!entryYearMatch || !sessionMatch) return undefined;
-
-    const entryYear = Number(entryYearMatch[1]);
-    const rawSessionYear = Number(sessionMatch[1]);
-    const sessionYear = rawSessionYear >= 100 ? rawSessionYear % 100 : rawSessionYear;
-    const levelStep = sessionYear - entryYear + 1;
-
-    if (!Number.isFinite(levelStep) || levelStep <= 0) return 100;
-
-    return Math.min(levelStep * 100, 600);
-  };
 
   const syncCoursesWithDepartments = (
     allDepartments: DepartmentRecord[],
@@ -192,9 +190,34 @@ function App() {
     }
   };
 
+  const getDefaultPathForRole = (nextRole: Role) => {
+    if (nextRole === "admin") return getAdminPath("overview");
+    if (nextRole === "staff") return getStaffPath("overview");
+    return getStudentPath("overview");
+  };
+
+  const getRoleFromSession = () => {
+    const storedSession = loadAuthSession();
+    if (!storedSession) return null;
+
+    if (storedSession.user.isAdmin) return "admin" as const;
+    if (storedSession.user.isStaff) return "staff" as const;
+    return "student" as const;
+  };
+
+  const getSemesterTerm = (
+    semesterName: string,
+  ): "Rain" | "Harmattan" | null => {
+    const normalized = semesterName.trim();
+    if (normalized.endsWith("Rain")) return "Rain";
+    if (normalized.endsWith("Harmattan")) return "Harmattan";
+    return null;
+  };
+
   const loadAdminDepartmentsAndCourses = async () => {
     const storedSession = loadAuthSession();
     if (!storedSession?.token) return;
+    if (!storedSession.user.isAdmin && !storedSession.user.isStaff) return;
 
     let allDepartments: DepartmentRecord[] = [];
     try {
@@ -238,147 +261,175 @@ function App() {
   const loadAdminSemesterData = async (portalRole: "admin" | "staff") => {
     const storedSession = loadAuthSession();
     if (!storedSession?.token) return;
+    if (
+      (portalRole === "admin" && !storedSession.user.isAdmin) ||
+      (portalRole === "staff" &&
+        !storedSession.user.isStaff &&
+        !storedSession.user.isAdmin)
+    ) {
+      return;
+    }
 
     setIsLoadingSemesterData(true);
     try {
-      const current = await fetchCurrentSemesterApi(
+      const currentRecordPromise = fetchCurrentSemesterRecordApi(
         apiBaseUrl,
         storedSession.token,
+      ).catch(() => null);
+      const sessionsPromise =
+        portalRole === "admin"
+          ? fetchSemestersApi(apiBaseUrl, storedSession.token).catch(() => [])
+          : Promise.resolve([]);
+
+      const [currentRecord, sessions] = await Promise.all([
+        currentRecordPromise,
+        sessionsPromise,
+      ]);
+
+      setManagedSemesters(portalRole === "admin" ? sessions : []);
+
+      setCurrentSemester(
+        currentRecord?.schoolSession?.trim()
+          ? currentRecord.schoolSession
+          : "Not set",
       );
-
-      if (portalRole === "admin") {
-        const sessions = await fetchSemestersApi(
-          apiBaseUrl,
-          storedSession.token,
-        );
-        setManagedSemesters(sessions);
-      } else {
-        setManagedSemesters([]);
-      }
-
-      setCurrentSemester(current?.trim() ? current : "Not set");
+      setCurrentSemesterId(currentRecord?.id?.trim() ?? "");
+      setCurrentSemesterTerm(
+        currentRecord?.schoolSession
+          ? getSemesterTerm(currentRecord.schoolSession)
+          : null,
+      );
+    } catch {
+      setCurrentSemester("Not set");
+      setCurrentSemesterId("");
+      setCurrentSemesterTerm(null);
+      if (portalRole === "admin") setManagedSemesters([]);
     } finally {
       setIsLoadingSemesterData(false);
     }
   };
 
-  const loadStudentRegistrationData = async (profileUser?: AuthUserProfile | null) => {
+  const loadStudentRegistrationData = async () => {
     const storedSession = loadAuthSession();
     if (!storedSession?.token) return;
+    if (storedSession.user.isAdmin || storedSession.user.isStaff) return;
 
-    const activeProfile = profileUser ?? currentUser ?? storedSession.user;
-    const activeMatricNo = activeProfile?.matricNo?.trim() ?? "";
-    const activeDepartment = activeProfile?.department?.trim() ?? "";
-    const current = await fetchCurrentSemesterApi(
-      apiBaseUrl,
-      storedSession.token,
-    );
-    const normalizedSemester = current?.trim() ? current : "";
+    setIsLoadingStudentCourses(true);
 
-    setCurrentSemester(normalizedSemester || "Not set");
-
-    if (!normalizedSemester) {
-      setCourses([]);
-      setRegisteredCourseCodes([]);
-      return;
-    }
-
-    const semesterTerm = getSemesterTerm(normalizedSemester);
-    const level = getStudentLevelFromMatricAndSemester(
-      activeMatricNo,
-      normalizedSemester,
-    );
-
-    if (!semesterTerm || !activeDepartment) {
-      setCourses([]);
-      setRegisteredCourseCodes([]);
-      return;
-    }
-
-    let allDepartments: DepartmentRecord[] = [];
     try {
-      allDepartments = await fetchDepartments(apiBaseUrl, storedSession.token);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      if (!message.toLowerCase().includes("no departments found")) {
-        throw error;
+      const [currentRecord, availableCourseData] = await Promise.all([
+        fetchCurrentSemesterRecordApi(apiBaseUrl, storedSession.token),
+        fetchAvailableCoursesForStudent(apiBaseUrl, storedSession.token),
+      ]);
+      const normalizedSemester = currentRecord?.schoolSession?.trim() ?? "";
+      const normalizedSemesterId = currentRecord?.id?.trim() ?? "";
+
+      setCurrentSemester(normalizedSemester || "Not set");
+      setCurrentSemesterId(normalizedSemesterId);
+      setCurrentSemesterTerm(getSemesterTerm(normalizedSemester));
+
+      if (!normalizedSemesterId) {
+        setCourses([]);
+        setRegisteredCourses([]);
+        setRegisteredCourseCodes([]);
+        setStudentResults([]);
+        setCurrentStudentLevel(null);
+        return;
       }
-    }
 
-    const settledCourses = await Promise.all(
-      allDepartments.map(async (department) => {
-        try {
-          const departmentCourses = await fetchCoursesByDepartment(
-            apiBaseUrl,
-            storedSession.token,
-            department.id,
-            {
-              semester: semesterTerm,
-              ...(level ? { level } : {}),
-            },
-          );
+      const resolvedSemesterName =
+        availableCourseData.currentSessionName.trim() || normalizedSemester;
+      const resolvedSemesterId =
+        availableCourseData.currentSessionId.trim() || normalizedSemesterId;
 
-          return departmentCourses.map((course) => ({
-            ...course,
-            departmentName: department.name,
-          }));
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "";
-          if (message.toLowerCase().includes("no courses found")) {
-            return [];
-          }
-          throw error;
-        }
-      }),
-    );
-
-    const normalizedDepartment = activeDepartment.toLowerCase();
-    const eligibleCourses = settledCourses.flat().filter((course) => {
-      const departmentName = course.departmentName.toLowerCase();
-      const courseCodePrefix = course.courseCode.split(/\d/, 1)[0]?.toLowerCase();
-
-      return (
-        departmentName === normalizedDepartment ||
-        courseCodePrefix === normalizedDepartment
+      setCurrentSemester(resolvedSemesterName || "Not set");
+      setCurrentSemesterId(resolvedSemesterId);
+      setCurrentSemesterTerm(availableCourseData.semester);
+      setCurrentStudentLevel(
+        availableCourseData.level > 0 ? availableCourseData.level : null,
       );
-    });
+      setCourses(
+        availableCourseData.courses.map((course) => ({
+          id: course.id,
+          code: course.courseCode,
+          title: course.title,
+          unit: course.units,
+          department: course.departmentName,
+          semester: course.semester,
+          level: course.level,
+        })),
+      );
 
-    setCourses(
-      eligibleCourses.map((course) => ({
-        id: course.id,
-        code: course.courseCode,
-        title: course.title,
-        unit: course.units,
-        department: course.departmentName,
-        semester: course.semester,
-        level: course.level,
-      })),
-    );
+      setIsLoadingStudentResults(true);
+      setIsLoadingComprehensiveReport(true);
+      const [registeredCourses, scores, report] = await Promise.all([
+        fetchRegisteredCoursesBySemesterApi(
+          apiBaseUrl,
+          storedSession.token,
+          resolvedSemesterId,
+        ),
+        fetchStudentScoresBySemester(
+          apiBaseUrl,
+          storedSession.token,
+          resolvedSemesterId,
+        ).finally(() => {
+          setIsLoadingStudentResults(false);
+        }),
+        fetchStudentComprehensiveReport(
+          apiBaseUrl,
+          storedSession.token,
+        ).finally(() => {
+          setIsLoadingComprehensiveReport(false);
+        }),
+      ]);
 
-    const registeredCourses = await fetchRegisteredCoursesBySemesterApi(
-      apiBaseUrl,
-      storedSession.token,
-      normalizedSemester,
-    );
-    const registeredCourseIds = new Set(
-      registeredCourses.map((course) => course.courseId),
-    );
+      setRegisteredCourses(registeredCourses);
+      setRegisteredCourseCodes(() => {
+        if (registeredCourses.length === 0) return [];
 
-    setRegisteredCourseCodes(
-      eligibleCourses
-        .filter((course) => registeredCourseIds.has(course.id))
-        .map((course) => course.courseCode),
-    );
+        const registeredCodes = registeredCourses
+          .map((course) => course.courseCode?.trim().toUpperCase())
+          .filter((code): code is string => Boolean(code));
+
+        if (registeredCodes.length > 0) {
+          return Array.from(new Set(registeredCodes));
+        }
+
+        const availableCourseById = new Map(
+          availableCourseData.courses.map((course) => [
+            course.id,
+            course.courseCode,
+          ]),
+        );
+
+        return registeredCourses
+          .map((course) => availableCourseById.get(course.courseId))
+          .map((code) => code?.trim().toUpperCase())
+          .filter((code): code is string => Boolean(code));
+      });
+      setStudentResults(scores);
+      setStudentComprehensiveReport(report);
+    } finally {
+      setIsLoadingStudentCourses(false);
+    }
   };
 
   const syncStateWithPath = (pathname: string) => {
-    const hasSession = Boolean(loadAuthSession()?.token);
+    const storedSession = loadAuthSession();
+    const hasSession = Boolean(storedSession?.token);
+    const sessionRole = getRoleFromSession();
 
     if (pathname.startsWith("/admin")) {
       if (!hasSession) {
         window.history.replaceState({}, "", LOGIN_PATH);
         setPage("auth");
         setAuthMode("login");
+        return;
+      }
+      if (sessionRole !== "admin") {
+        const redirectPath = getDefaultPathForRole(sessionRole ?? "student");
+        window.history.replaceState({}, "", redirectPath);
+        syncStateWithPath(redirectPath);
         return;
       }
       setPage("admin");
@@ -393,6 +444,12 @@ function App() {
         setAuthMode("login");
         return;
       }
+      if (sessionRole !== "student") {
+        const redirectPath = getDefaultPathForRole(sessionRole ?? "student");
+        window.history.replaceState({}, "", redirectPath);
+        syncStateWithPath(redirectPath);
+        return;
+      }
       setPage("student");
       setStudentSection(getStudentSectionFromPath(pathname));
       return;
@@ -403,6 +460,12 @@ function App() {
         window.history.replaceState({}, "", LOGIN_PATH);
         setPage("auth");
         setAuthMode("login");
+        return;
+      }
+      if (sessionRole !== "staff") {
+        const redirectPath = getDefaultPathForRole(sessionRole ?? "student");
+        window.history.replaceState({}, "", redirectPath);
+        syncStateWithPath(redirectPath);
         return;
       }
       setPage("staff");
@@ -460,29 +523,65 @@ function App() {
 
     try {
       if (authMode === "signup") {
+        if (role === "student") {
+          let availableDepartments = signupDepartments;
+          if (availableDepartments.length === 0) {
+            try {
+              availableDepartments = await fetchDepartmentNames(apiBaseUrl);
+              setSignupDepartments(availableDepartments);
+            } catch (err) {
+              console.error("fetchDepartmentNames failed on submit:", err);
+            }
+          }
+
+          const validDepartment = availableDepartments.some(
+            (d) =>
+              d.toLowerCase() === (authDepartment ?? "").trim().toLowerCase(),
+          );
+
+          if (!validDepartment) {
+            toast.error("Please select a valid department from the dropdown.");
+            setIsAuthenticating(false);
+            return;
+          }
+        }
+
         await signupUser(apiBaseUrl, {
           name: userName,
           email: authEmail,
           password: authPassword,
           matricNo: role === "student" ? authMatricNo : undefined,
           department: role === "student" ? authDepartment : undefined,
+          entryYear:
+            role === "student" ? Number(authEntryYear) || undefined : undefined,
         });
 
         setAuthMode("login");
         setAuthPassword("");
         setAuthMatricNo("");
         setAuthDepartment("");
+        setAuthEntryYear("");
         toast.success("Account created successfully. You can now log in.");
         return;
       }
 
       const loginPayload =
         role === "student"
-          ? { matricNo: authMatricNo, password: authPassword }
-          : { email: authEmail, password: authPassword };
+          ? {
+              matricNo: authMatricNo,
+              password: authPassword,
+              loginType: "user" as const,
+            }
+          : {
+              email: authEmail,
+              password: authPassword,
+              loginType: role,
+            };
 
-      const { token } = await loginUser(apiBaseUrl, loginPayload);
-      const profileUser = await fetchUserProfile(apiBaseUrl, token);
+      const { token, user: profileUser } = await loginUser(
+        apiBaseUrl,
+        loginPayload,
+      );
 
       setCurrentUser(profileUser);
       setUserName(profileUser.name ?? "");
@@ -562,7 +661,7 @@ function App() {
         setUserName(profileUser.name ?? "");
         setUserEmail(profileUser.email ?? "");
         if (nextRole === "student") {
-          await loadStudentRegistrationData(profileUser);
+          await loadStudentRegistrationData();
         }
 
         if (window.location.pathname.startsWith("/admin")) {
@@ -607,16 +706,22 @@ function App() {
       (page === "staff" && (currentUser?.isStaff || role === "staff"));
     if (!shouldLoadPortalData) return;
 
+    setIsLoadingAdminData(true);
+
     const portalRole = page === "admin" ? "admin" : "staff";
 
     void Promise.all([
       loadAdminDepartmentsAndCourses(),
       loadAdminSemesterData(portalRole),
-    ]).catch((error) => {
-      const message =
-        error instanceof Error ? error.message : "Failed to load admin data.";
-      toast.error(message);
-    });
+    ])
+      .catch((error) => {
+        const message =
+          error instanceof Error ? error.message : "Failed to load admin data.";
+        toast.error(message);
+      })
+      .finally(() => {
+        setIsLoadingAdminData(false);
+      });
   }, [page, currentUser?.isAdmin, currentUser?.isStaff, role, toast]);
 
   useEffect(() => {
@@ -630,6 +735,23 @@ function App() {
       toast.error(message);
     });
   }, [page, currentUser, role, apiBaseUrl, toast]);
+
+  useEffect(() => {
+    if (page !== "auth" || authMode !== "signup") return;
+    if (signupDepartments.length > 0) return;
+
+    let cancelled = false;
+
+    void fetchDepartmentNames(apiBaseUrl)
+      .then((names) => {
+        if (!cancelled) setSignupDepartments(names);
+      })
+      .catch((err) => console.error("fetchDepartmentNames failed:", err));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [page, authMode, apiBaseUrl, signupDepartments.length]);
 
   const signOut = async () => {
     const storedSession = loadAuthSession();
@@ -654,8 +776,10 @@ function App() {
       setUserEmail("");
       setAuthMatricNo("");
       setAuthDepartment("");
+      setAuthEntryYear("");
       setAuthEmail("");
       setAuthPassword("");
+      setStudentComprehensiveReport(null);
       clearAuthSession();
       navigateTo("/");
       toast.info("Logged out successfully.");
@@ -822,25 +946,103 @@ function App() {
     if (!storedSession?.token) throw new Error("Please login again.");
 
     if (params.scoreId) {
-      await updateCourseScore(
-        apiBaseUrl,
-        storedSession.token,
-        params.scoreId,
-        params.testScore,
-        params.examScore,
-      );
-      return { nextScoreId: params.scoreId };
+      throw new Error("Score already submitted. Use the Update Score page.");
     }
 
     const createdScoreId = await createCourseScore(
       apiBaseUrl,
       storedSession.token,
       params.registrationId,
+      currentSemesterId,
       params.testScore,
       params.examScore,
     );
 
     return { nextScoreId: createdScoreId };
+  };
+
+  const handleFindStaffScore = async (params: {
+    matricNo: string;
+    courseCode: string;
+  }) => {
+    const storedSession = loadAuthSession();
+    if (!storedSession?.token) throw new Error("Please login again.");
+    if (!currentSemesterId.trim()) {
+      throw new Error("Current semester ID is not available.");
+    }
+
+    const payload = await fetchRegisteredUsersForCourseApi(
+      apiBaseUrl,
+      storedSession.token,
+      params.courseCode,
+      currentSemesterId,
+    );
+
+    const normalizedMatricNo = params.matricNo.trim().toUpperCase();
+    const matchedStudent = payload.registeredUsers.find(
+      (row) => row.matricNo.trim().toUpperCase() === normalizedMatricNo,
+    );
+
+    if (!matchedStudent) {
+      throw new Error("No registered student found for that matric number.");
+    }
+
+    if (!matchedStudent.scoreId) {
+      throw new Error("This student has not been graded for the course yet.");
+    }
+
+    return {
+      scoreId: matchedStudent.scoreId,
+      registrationId: matchedStudent.registrationId,
+      userId: matchedStudent.userId,
+      name: matchedStudent.name,
+      matricNo: matchedStudent.matricNo,
+      email: matchedStudent.email,
+      courseCode: payload.course.courseCode ?? params.courseCode,
+      courseTitle: payload.course.title,
+      semester: matchedStudent.semester,
+      testScore: matchedStudent.testScore ?? 0,
+      examScore: matchedStudent.examScore ?? 0,
+      grade: "-",
+    };
+  };
+
+  const handleUpdateStaffScore = async (params: {
+    matricNo: string;
+    registrationId: string;
+    testScore: number;
+    examScore: number;
+  }) => {
+    const storedSession = loadAuthSession();
+    if (!storedSession?.token) throw new Error("Please login again.");
+    if (!currentSemesterId.trim()) {
+      throw new Error("Current semester ID is not available.");
+    }
+
+    await updateCourseScore(
+      apiBaseUrl,
+      storedSession.token,
+      params.matricNo,
+      params.registrationId,
+      currentSemesterId,
+      params.testScore,
+      params.examScore,
+    );
+  };
+
+  const handleFetchCourseScores = async (
+    courseCode: string,
+    semesterId: string,
+  ) => {
+    const storedSession = loadAuthSession();
+    if (!storedSession?.token) throw new Error("Please login again.");
+
+    return fetchScoresForCourseApi(
+      apiBaseUrl,
+      storedSession.token,
+      courseCode,
+      semesterId,
+    );
   };
 
   const handleUpdateUserPassword = async (password: string) => {
@@ -889,6 +1091,28 @@ function App() {
     await loadAdminSemesterData("admin");
   };
 
+  const handleLockSemester = async (semesterName: string) => {
+    const trimmedSemester = semesterName.trim();
+    if (!trimmedSemester) throw new Error("Semester name is required.");
+
+    const storedSession = loadAuthSession();
+    if (!storedSession?.token) throw new Error("Please login again.");
+
+    await lockSemesterApi(apiBaseUrl, storedSession.token, trimmedSemester);
+    await loadAdminSemesterData("admin");
+  };
+
+  const handleUnlockSemester = async (semesterName: string) => {
+    const trimmedSemester = semesterName.trim();
+    if (!trimmedSemester) throw new Error("Semester name is required.");
+
+    const storedSession = loadAuthSession();
+    if (!storedSession?.token) throw new Error("Please login again.");
+
+    await unlockSemesterApi(apiBaseUrl, storedSession.token, trimmedSemester);
+    await loadAdminSemesterData("admin");
+  };
+
   const handleUploadAvatar = async (file: File) => {
     const storedSession = loadAuthSession();
     if (!storedSession?.token) throw new Error("Please login again.");
@@ -915,25 +1139,73 @@ function App() {
     const storedSession = loadAuthSession();
     if (!storedSession?.token) throw new Error("Please login again.");
 
-    const activeSemesterName = currentSemester.trim();
-    if (!activeSemesterName || activeSemesterName === "Not set") {
+    const normalizedCourseCode = courseCode.trim().toUpperCase();
+    if (!normalizedCourseCode) throw new Error("Course code is required.");
+
+    const activeSemesterId = currentSemesterId.trim();
+    if (!currentSemester.trim() || currentSemester.trim() === "Not set") {
       throw new Error("Active semester is not available.");
     }
+    if (!activeSemesterId) {
+      throw new Error(
+        "Active semester ID is not available from the current session response.",
+      );
+    }
 
-    if (registeredCourseCodes.includes(courseCode)) {
+    if (registeredCourseCodes.includes(normalizedCourseCode)) {
       throw new Error("Course already registered.");
     }
 
     if (registeredCourseCodes.length >= 12) {
-      throw new Error("You cannot register more than 12 courses in a semester.");
+      throw new Error(
+        "You cannot register more than 12 courses in a semester.",
+      );
     }
 
     await registerStudentCourseApi(apiBaseUrl, storedSession.token, {
-      courseCode,
-      semester: activeSemesterName,
+      courseCode: normalizedCourseCode,
+      semesterId: activeSemesterId,
     });
 
-    setRegisteredCourseCodes((current) => [...current, courseCode]);
+    await loadStudentRegistrationData();
+  };
+
+  const handleDropRegisteredCourse = async (registeredCourseId: string) => {
+    const storedSession = loadAuthSession();
+    if (!storedSession?.token) throw new Error("Please login again.");
+
+    await dropRegisteredCourseApi(
+      apiBaseUrl,
+      storedSession.token,
+      registeredCourseId,
+    );
+
+    await loadStudentRegistrationData();
+  };
+
+  const handleSearchStudentCourse = async (courseCode: string) => {
+    const storedSession = loadAuthSession();
+    if (!storedSession?.token) throw new Error("Please login again.");
+    if (!currentSemesterTerm) {
+      throw new Error("Active semester term is not available.");
+    }
+
+    const course = await searchCourseByCode(
+      apiBaseUrl,
+      storedSession.token,
+      courseCode,
+      currentSemesterTerm,
+    );
+
+    return {
+      id: course.id,
+      code: course.courseCode,
+      title: course.title,
+      unit: course.units,
+      department: course.departmentName ?? "Unknown",
+      semester: course.semester,
+      level: course.level,
+    };
   };
 
   const adminNavItems = buildAdminNavItems(adminSection, goToAdminSection);
@@ -991,14 +1263,17 @@ function App() {
           userName={userName}
           matricNo={authMatricNo}
           department={authDepartment}
+          entryYear={authEntryYear}
           email={authEmail}
           password={authPassword}
           isSubmitting={isAuthenticating}
+          departments={signupDepartments}
           onSetAuthMode={handleSetAuthMode}
           onSetRole={setRole}
           onSetUserName={setUserName}
           onSetMatricNo={setAuthMatricNo}
           onSetDepartment={setAuthDepartment}
+          onSetEntryYear={setAuthEntryYear}
           onSetEmail={setAuthEmail}
           onSetPassword={setAuthPassword}
           onSubmit={handleAuthSubmit}
@@ -1034,6 +1309,9 @@ function App() {
             onCreateSemester={handleCreateSemester}
             onSetSemester={handleSetSemester}
             onUpdateSemester={handleUpdateSemester}
+            onLockSemester={handleLockSemester}
+            onUnlockSemester={handleUnlockSemester}
+            isLoading={isLoadingAdminData}
             isLoadingSemesterData={isLoadingSemesterData}
             onUpdateName={handleUpdateUserName}
             onUpdatePassword={handleUpdateUserPassword}
@@ -1048,24 +1326,33 @@ function App() {
           avatarUrl={currentUser?.avatar ?? null}
           navItems={studentNavItems}
           onSignOut={signOut}
+          hideSidebar={studentSection === "comprehensive-report"}
         >
           <StudentPortalContent
             studentSection={studentSection}
             userName={currentUser?.name ?? userName}
             userEmail={currentUser?.email ?? userEmail}
             matricNo={currentUser?.matricNo ?? authMatricNo}
+            department={currentUser?.department ?? authDepartment}
+            entryYear={
+              currentUser?.entryYear ?? (Number(authEntryYear) || null)
+            }
+            isGraduated={currentUser?.isGraduated ?? null}
+            currentLevel={currentStudentLevel}
             avatarUrl={currentUser?.avatar ?? null}
-            currentGpa={currentGpa}
-            currentCgpa={currentCgpa}
             registeredCourseCodes={registeredCourseCodes}
+            registeredCourses={registeredCourses}
             courses={courses}
             currentSemester={currentSemester}
-            semesters={semesters}
-            activeSemester={activeSemester}
-            semesterResults={semesterResults}
+            studentResults={studentResults}
+            comprehensiveReport={studentComprehensiveReport}
+            isLoadingCourses={isLoadingStudentCourses}
+            isLoadingResults={isLoadingStudentResults}
+            isLoadingComprehensiveReport={isLoadingComprehensiveReport}
             onGoToSection={goToStudentSection}
             onRegisterCourse={handleRegisterStudentCourse}
-            onChangeSemester={setActiveSemester}
+            onDropRegisteredCourse={handleDropRegisteredCourse}
+            onSearchCourse={handleSearchStudentCourse}
             onUpdateName={handleUpdateUserName}
             onUpdatePassword={handleUpdateUserPassword}
             onUploadAvatar={handleUploadAvatar}
@@ -1085,12 +1372,17 @@ function App() {
             departments={departments}
             courses={courses}
             currentSemester={currentSemester}
+            currentSemesterId={currentSemesterId}
+            isLoading={isLoadingAdminData}
             userName={userName}
             userEmail={userEmail}
             avatarUrl={currentUser?.avatar ?? null}
             onGoToSection={goToStaffSection}
             onFetchRegisteredUsers={handleFetchRegisteredUsersForCourse}
             onSaveScore={handleSaveStaffScore}
+            onFindScore={handleFindStaffScore}
+            onUpdateScore={handleUpdateStaffScore}
+            onFetchCourseScores={handleFetchCourseScores}
             onUpdateName={handleUpdateUserName}
             onUpdatePassword={handleUpdateUserPassword}
             onUploadAvatar={handleUploadAvatar}

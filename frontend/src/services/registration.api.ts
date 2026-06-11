@@ -1,14 +1,20 @@
 type RegisterCoursePayload = {
   courseCode: string;
-  semester: string;
+  semesterId: string;
 };
 
-type RegistrationRow = {
+export type RegistrationRow = {
   id: string;
   userId: string;
   courseId: string;
   semester: string;
   registeredAt?: string;
+  courseCode?: string;
+  title?: string;
+  units?: number;
+  courseSemester?: "Rain" | "Harmattan";
+  level?: number;
+  departmentName?: string;
 };
 
 type RegistrationResponse = {
@@ -41,7 +47,7 @@ export async function registerStudentCourse(
     },
     body: JSON.stringify({
       courseCode: payload.courseCode.trim().toUpperCase(),
-      semester: payload.semester.trim(),
+      semesterId: payload.semesterId.trim(),
     }),
   });
 
@@ -84,4 +90,60 @@ export async function fetchRegisteredCoursesBySemester(
   }
 
   return payload.data?.registeredCourses ?? [];
+}
+
+export async function updateRegisteredCourse(
+  apiBaseUrl: string,
+  token: string,
+  registeredCourseId: string,
+  payload: RegisterCoursePayload,
+): Promise<void> {
+  const response = await fetch(
+    `${apiBaseUrl}/courses-registrations/${registeredCourseId}`,
+    {
+      method: "PATCH",
+      cache: "no-store",
+      referrerPolicy: "no-referrer",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        courseCode: payload.courseCode.trim().toUpperCase(),
+        semester: payload.semesterId.trim(),
+      }),
+    },
+  );
+
+  const body = (await response.json().catch(() => ({}))) as RegistrationResponse;
+  if (!response.ok) {
+    throw new Error(
+      getRegistrationErrorMessage(body, "Unable to update registered course."),
+    );
+  }
+}
+
+export async function dropRegisteredCourse(
+  apiBaseUrl: string,
+  token: string,
+  registeredCourseId: string,
+): Promise<void> {
+  const response = await fetch(
+    `${apiBaseUrl}/courses-registrations/${registeredCourseId}`,
+    {
+      method: "DELETE",
+      cache: "no-store",
+      referrerPolicy: "no-referrer",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  const body = (await response.json().catch(() => ({}))) as RegistrationResponse;
+  if (!response.ok) {
+    throw new Error(
+      getRegistrationErrorMessage(body, "Unable to drop registered course."),
+    );
+  }
 }
