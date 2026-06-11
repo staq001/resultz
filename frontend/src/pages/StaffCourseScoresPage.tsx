@@ -154,7 +154,6 @@ export function StaffCourseScoresPage({
             <table>
               <thead>
                 <tr>
-                  <th>Score ID</th>
                   <th>Name</th>
                   <th>Matric No</th>
                   <th>Test</th>
@@ -166,7 +165,6 @@ export function StaffCourseScoresPage({
               <tbody>
                 {scores.map((row) => (
                   <tr key={row.scoreId}>
-                    <td>{row.scoreId}</td>
                     <td>{row.name ?? "N/A"}</td>
                     <td>{row.matricNo ?? "N/A"}</td>
                     <td>{row.testScore}</td>

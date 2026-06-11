@@ -104,18 +104,18 @@ export function StaffUpdateScorePage({
     if (
       Number.isNaN(nextTestScore) ||
       nextTestScore < 0 ||
-      nextTestScore > 40
+      nextTestScore > 30
     ) {
-      toast.error("Test score must be between 0 and 40.");
+      toast.error("Test score must be between 0 and 30.");
       return;
     }
 
     if (
       Number.isNaN(nextExamScore) ||
       nextExamScore < 0 ||
-      nextExamScore > 60
+      nextExamScore > 70
     ) {
-      toast.error("Exam score must be between 0 and 60.");
+      toast.error("Exam score must be between 0 and 70.");
       return;
     }
 
@@ -225,7 +225,7 @@ export function StaffUpdateScorePage({
 
           <form className="grid-2 score-update-form" onSubmit={saveScore}>
             <label>
-              Test Score (40)
+              Test Score (30)
               <input
                 type="number"
                 min={0}
@@ -235,17 +235,17 @@ export function StaffUpdateScorePage({
               />
             </label>
             <label>
-              Exam Score (60)
+              Exam Score (70)
               <input
                 type="number"
                 min={0}
-                max={60}
+                max={70}
                 value={examScore}
                 onChange={(event) => setExamScore(event.target.value)}
               />
             </label>
             <div className="score-summary">
-              <span>Total</span>
+              <span>Total: </span>
               <strong>
                 {total !== null && !Number.isNaN(total) ? total : "-"}
               </strong>

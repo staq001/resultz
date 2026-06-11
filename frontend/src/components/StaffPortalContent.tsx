@@ -15,6 +15,7 @@ type StaffPortalContentProps = {
   courses: Course[];
   currentSemester: string;
   currentSemesterId: string;
+  isLoading: boolean;
   userName: string;
   userEmail: string;
   avatarUrl?: string | null;
@@ -67,6 +68,7 @@ export function StaffPortalContent({
   courses,
   currentSemester,
   currentSemesterId,
+  isLoading,
   userName,
   userEmail,
   avatarUrl,
@@ -86,6 +88,7 @@ export function StaffPortalContent({
         departmentsCount={departments.length}
         coursesCount={courses.length}
         currentSemester={currentSemester}
+        isLoading={isLoading}
       />
     );
   }

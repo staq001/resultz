@@ -1,7 +1,10 @@
+import { LoadingSpinner } from "../components/LoadingSpinner";
+
 type StaffOverviewPageProps = {
   departmentsCount: number;
   coursesCount: number;
   currentSemester: string;
+  isLoading: boolean;
 };
 
 const gradingChecklist = [
@@ -14,7 +17,12 @@ export function StaffOverviewPage({
   departmentsCount,
   coursesCount,
   currentSemester,
+  isLoading,
 }: StaffOverviewPageProps) {
+  if (isLoading) {
+    return <LoadingSpinner fullPage message="Loading staff dashboard..." />;
+  }
+
   return (
     <main className="dashboard-wrap page-stack">
       <section className="hero-banner">

@@ -153,13 +153,13 @@ export function StaffGradingPage({
     const testScore = Number(draft?.testScore);
     const examScore = Number(draft?.examScore);
 
-    if (Number.isNaN(testScore) || testScore < 0 || testScore > 40) {
-      toast.error("Test score must be between 0 and 40.");
+    if (Number.isNaN(testScore) || testScore < 0 || testScore > 30) {
+      toast.error("Test score must be between 0 and 30.");
       return;
     }
 
-    if (Number.isNaN(examScore) || examScore < 0 || examScore > 60) {
-      toast.error("Exam score must be between 0 and 60.");
+    if (Number.isNaN(examScore) || examScore < 0 || examScore > 70) {
+      toast.error("Exam score must be between 0 and 70.");
       return;
     }
 
@@ -315,7 +315,7 @@ export function StaffGradingPage({
                         <input
                           type="number"
                           min={0}
-                          max={40}
+                          max={30}
                           value={draft.testScore}
                           disabled={isSubmitted}
                           onChange={(event) =>
@@ -331,7 +331,7 @@ export function StaffGradingPage({
                         <input
                           type="number"
                           min={0}
-                          max={60}
+                          max={70}
                           value={draft.examScore}
                           disabled={isSubmitted}
                           onChange={(event) =>
