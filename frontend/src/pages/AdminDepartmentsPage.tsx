@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Course, FormSubmitHandler } from "../types/app.types";
 import { useToast } from "../components/ToastProvider";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 
 type AdminDepartmentsPageProps = {
   departments: string[];
   courses: Course[];
+  isLoading: boolean;
   onCreateDepartment: (name: string, faculty: string) => Promise<void>;
   onUpdateDepartment: (
     currentName: string,
@@ -18,11 +20,15 @@ type AdminDepartmentsPageProps = {
 export function AdminDepartmentsPage({
   departments,
   courses,
+  isLoading,
   onCreateDepartment,
   onUpdateDepartment,
   onFindDepartmentsByFaculty,
   onBack,
 }: AdminDepartmentsPageProps) {
+  if (isLoading) {
+    return <LoadingSpinner fullPage message="Loading departments..." />;
+  }
   const [newDepartment, setNewDepartment] = useState("");
   const [currentName, setCurrentName] = useState(departments[0] ?? "");
   const [updatedName, setUpdatedName] = useState("");

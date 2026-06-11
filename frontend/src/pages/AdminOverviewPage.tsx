@@ -1,14 +1,22 @@
+import { LoadingSpinner } from "../components/LoadingSpinner";
+
 type AdminOverviewPageProps = {
   departmentsCount: number;
   coursesCount: number;
   currentSemester: string;
+  isLoading: boolean;
 };
 
 export function AdminOverviewPage({
   departmentsCount,
   coursesCount,
   currentSemester,
+  isLoading,
 }: AdminOverviewPageProps) {
+  if (isLoading) {
+    return <LoadingSpinner fullPage message="Loading admin dashboard..." />;
+  }
+
   return (
     <main className="dashboard-wrap page-stack">
       <section className="hero-banner">

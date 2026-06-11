@@ -5,12 +5,14 @@ import type {
   NewCourseForm,
 } from "../types/app.types";
 import { useToast } from "../components/ToastProvider";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 
 type AdminCoursesPageProps = {
   title?: string;
   backButtonLabel?: string;
   departments: string[];
   courses: Course[];
+  isLoading: boolean;
   newCourse: NewCourseForm;
   onSetNewCourse: (value: NewCourseForm) => void;
   onCreateCourse: (value: NewCourseForm) => Promise<void>;
@@ -23,12 +25,16 @@ export function AdminCoursesPage({
   backButtonLabel = "Back to Admin Home",
   departments,
   courses,
+  isLoading,
   newCourse,
   onSetNewCourse,
   onCreateCourse,
   onUpdateCourse,
   onBack,
 }: AdminCoursesPageProps) {
+  if (isLoading) {
+    return <LoadingSpinner fullPage message="Loading courses..." />;
+  }
   const [fetchCode, setFetchCode] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState(
     departments[0] ?? "",

@@ -11,6 +11,7 @@ type AdminPortalContentProps = {
   courses: Course[];
   currentSemester: string;
   semesters: string[];
+  isLoading: boolean;
   isLoadingSemesterData: boolean;
   newCourse: NewCourseForm;
   userName: string;
@@ -43,6 +44,7 @@ export function AdminPortalContent({
   courses,
   currentSemester,
   semesters,
+  isLoading,
   isLoadingSemesterData,
   newCourse,
   userName,
@@ -70,6 +72,7 @@ export function AdminPortalContent({
         departmentsCount={departments.length}
         coursesCount={courses.length}
         currentSemester={currentSemester}
+        isLoading={isLoading}
       />
     );
   }
@@ -79,6 +82,7 @@ export function AdminPortalContent({
       <AdminDepartmentsPage
         departments={departments}
         courses={courses}
+        isLoading={isLoading}
         onCreateDepartment={onCreateDepartment}
         onUpdateDepartment={onUpdateDepartment}
         onFindDepartmentsByFaculty={onFindDepartmentsByFaculty}
@@ -92,6 +96,7 @@ export function AdminPortalContent({
       <AdminCoursesPage
         departments={departments}
         courses={courses}
+        isLoading={isLoading}
         newCourse={newCourse}
         onSetNewCourse={onSetNewCourse}
         onCreateCourse={onCreateCourse}
