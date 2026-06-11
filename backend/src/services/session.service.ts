@@ -90,14 +90,15 @@ export class SessionService {
         .from(currentSession)
         .limit(1);
 
-      if (currentSchSession.currentSession ===sessionName ) throw new BadRequest("Invalid Operation. This is the current semester");
-
       if (!currentSchSession) {
         await db.insert(currentSession).values({
           currentSession: schSession.schoolSession,
         });
         return;
       }
+
+      if (currentSchSession.currentSession === sessionName)
+        throw new BadRequest("Invalid Operation. This is the current semester");
 
       await db
         .update(currentSession)

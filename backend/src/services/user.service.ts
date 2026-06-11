@@ -221,6 +221,10 @@ export class UserService implements US {
   }
 
   private async upload(file: File, oldImage?: string | null) {
+    if (!file) throw new BadRequest("No file uploaded");
+    if (file.size > 3 * 1024 * 1024)
+      throw new BadRequest("File size exceeds the 3MB limit");
+
     const byteArrayBuffer = await file.arrayBuffer();
     const base64 = encodeBase64(byteArrayBuffer);
     try {

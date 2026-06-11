@@ -1,6 +1,7 @@
 import type { Context, Next } from "hono";
-import { and, eq, getTableColumns } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { createMiddleware } from "hono/factory";
+import * as jose from "jose";
 
 import { Unauthorized } from "@/utils/error";
 import { users } from "@/db/schema/user";
@@ -28,7 +29,7 @@ export class Auth {
 
       await next();
     } catch (e: any) {
-      if (e.name === "TokenExpiredError" || e.name === "JsonWebTokenError") {
+      if (e instanceof jose.errors.JWTExpired || e.code === "ERR_JWT_EXPIRED") {
         return c.json({ error: "Please authenticate" }, 401);
       }
       return c.json(
