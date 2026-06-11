@@ -3,6 +3,7 @@ import type { AuthUserProfile } from "../types/app.types";
 type LoginResponse = {
   data?: {
     token?: string;
+    user?: AuthUserProfile;
   };
   message?: string;
   error?: string;
@@ -30,8 +31,9 @@ export async function loginUser(
     password: string;
     email?: string;
     matricNo?: string;
+    loginType?: "user" | "admin" | "staff";
   },
-): Promise<{ token: string }> {
+): Promise<{ token: string; user: AuthUserProfile }> {
   const email = incomingPayload.email?.trim();
   const matricNo = incomingPayload.matricNo?.trim();
 
@@ -50,6 +52,7 @@ export async function loginUser(
       ...(email ? { email } : {}),
       ...(matricNo ? { matricNo } : {}),
       password: incomingPayload.password,
+      loginType: incomingPayload.loginType ?? "user",
     }),
   });
 
@@ -61,11 +64,12 @@ export async function loginUser(
   }
 
   const token = payload.data?.token;
-  if (!token) {
+  const user = payload.data?.user;
+  if (!token || !user) {
     throw new Error("Invalid login response from server.");
   }
 
-  return { token };
+  return { token, user };
 }
 
 export async function signupUser(
@@ -76,6 +80,7 @@ export async function signupUser(
     password: string;
     matricNo?: string;
     department?: string;
+    entryYear?: number;
   },
 ): Promise<void> {
   const response = await fetch(`${apiBaseUrl}/users/signup`, {
@@ -92,6 +97,9 @@ export async function signupUser(
       ...(payload.matricNo ? { matricNo: payload.matricNo.trim() } : {}),
       ...(payload.department
         ? { department: payload.department.trim() }
+        : {}),
+      ...(typeof payload.entryYear === "number"
+        ? { entryYear: payload.entryYear }
         : {}),
     }),
   });

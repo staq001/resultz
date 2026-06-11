@@ -1,35 +1,32 @@
-const parseSemesterMessage = async (response: Response): Promise<string> => {
-  let payload: unknown;
+const parseJson = async <T>(response: Response): Promise<T | null> => {
   try {
-    payload = await response.json();
-  } catch {
-    payload = null;
-  }
-
-  if (typeof payload === "object" && payload !== null) {
-    const record = payload as Record<string, unknown>;
-    if (typeof record.message === "string") return record.message;
-    if (typeof record.error === "string") return record.error;
-  }
-
-  return "Semester request failed.";
-};
-
-const parseSemesterPayload = async (response: Response): Promise<unknown> => {
-  try {
-    return await response.json();
+    return await response.json() as T;
   } catch {
     return null;
   }
 };
 
-const getSemesterError = (payload: unknown): string => {
+const extractErrorMessage = (payload: unknown, fallback: string): string => {
   if (typeof payload === "object" && payload !== null) {
     const record = payload as Record<string, unknown>;
     if (typeof record.message === "string") return record.message;
     if (typeof record.error === "string") return record.error;
   }
-  return "Semester request failed.";
+  return fallback;
+};
+
+export type SemesterRecord = {
+  id: string;
+  schoolSession: string;
+  registrationStatus?: string;
+  lockedBy?: string | null;
+  lockedAt?: string | null;
+};
+
+type ApiEnvelope = {
+  data?: unknown;
+  message?: string;
+  error?: string;
 };
 
 export async function createSemester(
@@ -46,11 +43,12 @@ export async function createSemester(
     body: JSON.stringify({ sessionName }),
   });
 
+  const payload = await parseJson<ApiEnvelope>(response);
   if (!response.ok) {
-    throw new Error(await parseSemesterMessage(response));
+    throw new Error(extractErrorMessage(payload, "Failed to create semester."));
   }
 
-  return parseSemesterMessage(response);
+  return payload?.message ?? "Semester created successfully.";
 }
 
 export async function setSemester(
@@ -67,11 +65,12 @@ export async function setSemester(
     body: JSON.stringify({ sessionName }),
   });
 
+  const payload = await parseJson<ApiEnvelope>(response);
   if (!response.ok) {
-    throw new Error(await parseSemesterMessage(response));
+    throw new Error(extractErrorMessage(payload, "Failed to set semester."));
   }
 
-  return parseSemesterMessage(response);
+  return payload?.message ?? "Semester set successfully.";
 }
 
 export async function updateSemester(
@@ -89,32 +88,100 @@ export async function updateSemester(
     body: JSON.stringify({ sessionName, newSessionName }),
   });
 
+  const payload = await parseJson<ApiEnvelope>(response);
   if (!response.ok) {
-    throw new Error(await parseSemesterMessage(response));
+    throw new Error(extractErrorMessage(payload, "Failed to update semester."));
   }
 
-  return parseSemesterMessage(response);
+  return payload?.message ?? "Semester updated successfully.";
+}
+
+export async function lockSemester(
+  apiBaseUrl: string,
+  token: string,
+  sessionName: string,
+): Promise<string> {
+  const response = await fetch(`${apiBaseUrl}/sessions/lock`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ sessionName }),
+  });
+
+  const payload = await parseJson<ApiEnvelope>(response);
+  if (!response.ok) {
+    throw new Error(extractErrorMessage(payload, "Failed to lock semester."));
+  }
+
+  return payload?.message ?? "Semester locked successfully.";
+}
+
+export async function unlockSemester(
+  apiBaseUrl: string,
+  token: string,
+  sessionName: string,
+): Promise<string> {
+  const response = await fetch(`${apiBaseUrl}/sessions/unlock`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ sessionName }),
+  });
+
+  const payload = await parseJson<ApiEnvelope>(response);
+  if (!response.ok) {
+    throw new Error(extractErrorMessage(payload, "Failed to unlock semester."));
+  }
+
+  return payload?.message ?? "Semester unlocked successfully.";
 }
 
 export async function fetchCurrentSemester(
   apiBaseUrl: string,
   token: string,
 ): Promise<string | null> {
+  const record = await fetchCurrentSemesterRecord(apiBaseUrl, token);
+  return record?.schoolSession ?? null;
+}
+
+export async function fetchCurrentSemesterRecord(
+  apiBaseUrl: string,
+  token: string,
+): Promise<SemesterRecord | null> {
   const response = await fetch(`${apiBaseUrl}/sessions/current`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { Authorization: `Bearer ${token}` },
   });
 
-  const payload = await parseSemesterPayload(response);
+  const payload = await parseJson<ApiEnvelope>(response);
+
   if (!response.ok) {
-    throw new Error(getSemesterError(payload));
+    if (response.status === 404) return null;
+    throw new Error(
+      extractErrorMessage(payload, "Failed to fetch current semester."),
+    );
   }
 
-  if (typeof payload === "object" && payload !== null) {
-    const record = payload as Record<string, unknown>;
-    if (typeof record.data === "string") {
-      return record.data;
+  if (typeof payload !== "object" || payload === null) return null;
+
+  const { data } = payload;
+  if (data == null) return null;
+
+  if (typeof data === "object") {
+    const entry = data as Record<string, unknown>;
+    const id = typeof entry.id === "string" ? entry.id : "";
+    const schoolSession =
+      typeof entry.schoolSession === "string"
+        ? entry.schoolSession
+        : typeof entry.currentSession === "string"
+          ? entry.currentSession
+          : "";
+
+    if (schoolSession.trim()) {
+      return { id, schoolSession };
     }
   }
 
@@ -126,20 +193,17 @@ export async function fetchSemesters(
   token: string,
 ): Promise<string[]> {
   const response = await fetch(`${apiBaseUrl}/sessions`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { Authorization: `Bearer ${token}` },
   });
 
-  const payload = await parseSemesterPayload(response);
+  const payload = await parseJson<ApiEnvelope>(response);
   if (!response.ok) {
-    throw new Error(getSemesterError(payload));
+    throw new Error(extractErrorMessage(payload, "Failed to fetch semesters."));
   }
 
   if (typeof payload !== "object" || payload === null) return [];
-  const record = payload as Record<string, unknown>;
-  const data = record.data;
 
+  const { data } = payload;
   if (!Array.isArray(data)) return [];
 
   return data
@@ -148,6 +212,7 @@ export async function fetchSemesters(
       if (typeof item === "object" && item !== null) {
         const entry = item as Record<string, unknown>;
         if (typeof entry.schoolSession === "string") return entry.schoolSession;
+        if (typeof entry.currentSession === "string") return entry.currentSession;
       }
       return null;
     })

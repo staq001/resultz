@@ -8,6 +8,24 @@ export type CourseRecord = {
   level: number;
 };
 
+export type CourseSearchRecord = CourseRecord & {
+  departmentName?: string;
+};
+
+type AvailableCoursesPayload = {
+  department?: {
+    id?: string;
+    name?: string;
+  };
+  currentSession?: {
+    id?: string;
+    schoolSession?: string;
+  };
+  level?: number;
+  semester?: "Rain" | "Harmattan";
+  courses?: CourseRecord[];
+};
+
 type CoursesEnvelope = {
   page?: number;
   totalPages?: number;
@@ -16,8 +34,12 @@ type CoursesEnvelope = {
 
 type ApiResponse = {
   data?: {
-    course?: CourseRecord;
-    courses?: CoursesEnvelope;
+    course?: CourseSearchRecord;
+    courses?: CoursesEnvelope | CourseRecord[];
+    department?: AvailableCoursesPayload["department"];
+    currentSession?: AvailableCoursesPayload["currentSession"];
+    level?: number;
+    semester?: "Rain" | "Harmattan";
   };
   message?: string;
   error?: string;
@@ -60,7 +82,89 @@ export async function fetchCoursesByDepartment(
     throw new Error(getErrorMessage(payload, "Unable to fetch courses."));
   }
 
-  return payload.data?.courses?.courses ?? [];
+  const coursesPayload = payload.data?.courses;
+  if (!coursesPayload || Array.isArray(coursesPayload)) return [];
+
+  return coursesPayload.courses ?? [];
+}
+
+export async function fetchAvailableCoursesForStudent(
+  apiBaseUrl: string,
+  token: string,
+): Promise<{
+  departmentName: string;
+  currentSessionId: string;
+  currentSessionName: string;
+  level: number;
+  semester: "Rain" | "Harmattan";
+  courses: Array<CourseRecord & { departmentName: string }>;
+}> {
+  const response = await fetch(`${apiBaseUrl}/courses/available`, {
+    cache: "no-store",
+    referrerPolicy: "no-referrer",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as ApiResponse;
+  if (!response.ok) {
+    throw new Error(
+      getErrorMessage(payload, "Unable to fetch available courses."),
+    );
+  }
+
+  const departmentName = payload.data?.department?.name ?? "";
+  const currentSessionId = payload.data?.currentSession?.id ?? "";
+  const currentSessionName = payload.data?.currentSession?.schoolSession ?? "";
+  const level = payload.data?.level ?? 0;
+  const semester = payload.data?.semester ?? "Rain";
+  const coursesPayload = payload.data?.courses;
+  const courses = (Array.isArray(coursesPayload) ? coursesPayload : []).map(
+    (course) => ({
+    ...course,
+    departmentName,
+    }),
+  );
+
+  return {
+    departmentName,
+    currentSessionId,
+    currentSessionName,
+    level,
+    semester,
+    courses,
+  };
+}
+
+export async function searchCourseByCode(
+  apiBaseUrl: string,
+  token: string,
+  courseCode: string,
+  semester?: "Rain" | "Harmattan",
+): Promise<CourseSearchRecord> {
+  const params = new URLSearchParams({
+    courseCode: courseCode.trim().toUpperCase(),
+  });
+  if (semester) params.set("semester", semester);
+
+  const response = await fetch(
+    `${apiBaseUrl}/courses-registrations/course?${params.toString()}`,
+    {
+      cache: "no-store",
+      referrerPolicy: "no-referrer",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  const payload = (await response.json().catch(() => ({}))) as ApiResponse;
+  if (!response.ok || !payload.data?.course) {
+    throw new Error(getErrorMessage(payload, "Course not found."));
+  }
+
+  return payload.data.course;
 }
 
 export async function createCourse(
