@@ -1,3 +1,4 @@
+import { LoadingSpinner } from "../components/LoadingSpinner";
 import type {
   ComprehensiveReport,
   StudentScoreRecord,
@@ -15,6 +16,7 @@ type StudentOverviewPageProps = {
   registeredCount?: number;
   registeredCourseCodes?: string[];
   studentResults?: StudentScoreRecord[];
+  isLoading: boolean;
 };
 
 export function StudentOverviewPage({
@@ -23,10 +25,16 @@ export function StudentOverviewPage({
   currentLevel,
   comprehensiveReport,
   isGraduated,
+  isLoading,
 }: StudentOverviewPageProps) {
   const semesters = comprehensiveReport?.semesters ?? [];
   const currentGpa =
     semesters.length > 0 ? semesters[semesters.length - 1].gpa : 0;
+
+  if (isLoading) {
+    return <LoadingSpinner fullPage message="Loading student data..." />;
+  }
+
   return (
     <main className="dashboard-wrap page-stack">
       <section className="hero-banner">

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useToast } from "../components/ToastProvider";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 import type { Course } from "../types/app.types";
 
 type StudentRegistrationPageProps = {
@@ -88,7 +89,9 @@ export function StudentRegistrationPage({
         </p>
 
         {isLoadingCourses && (
-          <p className="sub table-empty">Loading eligible courses...</p>
+          <div className="table-empty">
+            <LoadingSpinner message="Loading eligible courses..." />
+          </div>
         )}
         <div className="table-wrap">
           <table>
