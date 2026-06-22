@@ -1,5 +1,12 @@
 import type { ResultSetHeader } from "mysql2";
-import type { users, departments, otps, courses, emails } from "@/db/schema";
+import {
+  scoreCourses,
+  type users,
+  departments,
+  type otps,
+  type courses,
+  type emails,
+} from "@/db/schema";
 import type { Context, Env } from "hono";
 import type z from "zod";
 import type {
@@ -134,7 +141,8 @@ type table =
   | typeof otps
   | typeof courses
   | typeof departments
-  | typeof emails;
+  | typeof emails
+  | typeof scoreCourses;
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -326,6 +334,8 @@ export type CheckRegisteredCourses = {
 };
 
 /** SCORES */
+export type NewScore = typeof scoreCourses.$inferInsert;
+
 type ScoreCoursesSchema = z.infer<typeof scoreCourseSchema>;
 
 export type ScoreCourseContext = Context<
@@ -355,3 +365,18 @@ export type comprehensiveReportRows = {
   isGraduated: boolean | null;
   faculty: string;
 }[];
+
+// CSV
+export type ParseCourse = {
+  courseCode: string;
+  semester: string;
+  units: string;
+  title: string;
+  level: string;
+};
+
+export type ParseScore = {
+  matric_no: string;
+  testScore: string;
+  examScore: string;
+};
