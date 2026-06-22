@@ -222,6 +222,10 @@ export class UserService implements US {
 
   private async upload(file: File, oldImage?: string | null) {
     if (!file) throw new BadRequest("No file uploaded");
+    if (file.type !== "image/jpeg" && file.type !== "image/png")
+      throw new BadRequest(
+        "Invalid file type. Only JPEG and PNG images are allowed",
+      );
     if (file.size > 3 * 1024 * 1024)
       throw new BadRequest("File size exceeds the 3MB limit");
 
