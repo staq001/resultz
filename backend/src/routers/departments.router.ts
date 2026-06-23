@@ -2,6 +2,9 @@ import { Hono } from "hono";
 import { zodValidator } from "@/middleware/errorHandler";
 import { Auth } from "@/middleware/auth";
 import { DepartmentController } from "@/controllers/department.controller";
+import { CSVController } from "@/controllers/csv.controller.ts";
+
+import { uploadCSVSchema } from "@/schema/csv.schema";
 import {
   createDepartmentSchema,
   updateDepartmentSchema,
@@ -10,6 +13,8 @@ import {
 const { authentication, adminProtectedRoute, adminOrStaffProtectedRoute } =
   new Auth();
 const app = new Hono();
+
+const { processCSV } = new CSVController();
 
 const {
   createDepartment,
@@ -27,6 +32,13 @@ app.post(
   adminProtectedRoute,
   zodValidator(createDepartmentSchema),
   createDepartment,
+);
+
+app.post(
+  "/departments/bulkInput",
+  authentication,
+  adminProtectedRoute,
+  processCSV,
 );
 
 app.put(

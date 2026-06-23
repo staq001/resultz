@@ -7,6 +7,12 @@ import { addCourseSchema, updateCourseSchema } from "@/schema/courses.schema";
 const { authentication, adminProtectedRoute } = new Auth();
 const app = new Hono();
 
+import { CSVController } from "@/controllers/csv.controller.ts";
+
+import { uploadCSVSchema } from "@/schema/csv.schema";
+
+const { processCSV } = new CSVController();
+
 const {
   addCourse,
   deleteCourse,
@@ -23,6 +29,8 @@ app.post(
   zodValidator(addCourseSchema),
   addCourse,
 );
+
+app.post("/courses/bulkInput", authentication, adminProtectedRoute, processCSV);
 
 app.delete(
   "/courses/delete/:courseId",
