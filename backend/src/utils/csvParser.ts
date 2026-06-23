@@ -2,11 +2,13 @@ import csv from "fast-csv";
 import { db } from "../db/mysql";
 import { logger } from "./logger";
 import type {
+  CsvRow,
+  ImportStats,
   NewCourse,
   NewDepartment,
   NewScore,
-  ParseCourse,
-  ParseScore,
+  parserOptions,
+  ScoreImportContext,
 } from "@/types";
 import {
   courseRegistrations,
@@ -19,37 +21,11 @@ import { and, eq } from "drizzle-orm";
 import { grading } from ".";
 import { NotFound } from "./error";
 
-type CsvRowType = "courses" | "departments" | "scores";
-
-type CsvRow = Partial<ParseCourse & ParseScore> & {
-  type?: CsvRowType;
-  department?: string;
-  name?: string;
-  faculty?: string;
-};
-
-type ImportStats = {
-  processed: number;
-  skipped: number;
-  inserted: {
-    courses: number;
-    departments: number;
-    scores: number;
-  };
-};
-
-type ScoreImportContext = {
-  courseId: string;
-  semesterId: string;
-};
-
 const BATCH_SIZE = 500;
 
 export async function parser(
   file: { createReadStream: () => NodeJS.ReadableStream },
-  courseCode: string,
-  semester?: string,
-  createdBy?: string,
+  options?: parserOptions,
 ): Promise<ImportStats> {
   const csvParser = csv.parse<CsvRow, CsvRow>({
     headers: true,
@@ -73,8 +49,8 @@ export async function parser(
   };
 
   const scoreContext =
-    courseCode && semester
-      ? await buildScoreImportContext(courseCode, semester)
+    options && options.courseCode && options.semesterId
+      ? await buildScoreImportContext(options.courseCode, options.semesterId)
       : null;
 
   for await (const row of csvParser) {
@@ -99,12 +75,16 @@ export async function parser(
       }
 
       case "courses": {
-        if (!createdBy) {
+        if (!options?.createdBy) {
           stats.skipped++;
           break;
         }
 
-        const course = await transformCourse(row, row.department, createdBy);
+        const course = await transformCourse(
+          row,
+          row.department,
+          options.createdBy,
+        );
 
         if (!course) {
           stats.skipped++;
@@ -185,7 +165,9 @@ async function flushDepartments(batch: NewDepartment[]) {
     batch.length = 0;
     return count;
   } catch (e: any) {
-    logger.error(`Error inserting departments batch into database: ${e.message}`);
+    logger.error(
+      `Error inserting departments batch into database: ${e.message}`,
+    );
     throw e;
   }
 }
@@ -250,7 +232,14 @@ async function transformCourse(
 ): Promise<NewCourse | null> {
   const { courseCode, semester, units, title, level } = row;
 
-  if (!courseCode || !units || !title || !semester || !level || !departmentName) {
+  if (
+    !courseCode ||
+    !units ||
+    !title ||
+    !semester ||
+    !level ||
+    !departmentName
+  ) {
     return null;
   }
 

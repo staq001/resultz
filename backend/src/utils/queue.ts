@@ -1,9 +1,13 @@
 import Bull from "bull";
 import type { Job } from "bull";
-import type { EmailPayload } from "../types";
+import type { EmailPayload, parserOptions } from "../types";
 import { logger } from "./logger";
 import { Email } from "../mails/email";
 import { storage } from "./googleCloud";
+import { parser } from "./csvParser";
+import { CSV } from "@/services/csv.services";
+
+const { updateFileRecord } = new CSV();
 
 const retries: number = 3;
 const delay: number = 1000 * 60 * 5;
@@ -42,13 +46,23 @@ emailQueue.on("failed", (job: Job, error: Error) => {
   logger.info(`Job with id ${job.id} has failed with error: ${error.message}`);
 });
 
+// csv
+
 const csvQueue = new Bull("CSV", {
   redis: Bun.env.REDIS_URL,
 });
 
-const addCSVToQueue = async (bucket: string, objectKey: string) => {
+export type CSVJob = "departments" | "courses" | "scores";
+
+const addCSVToQueue = async (
+  fileId: string,
+  bucket: string,
+  objectKey: string,
+  type: CSVJob,
+  options?: parserOptions,
+) => {
   await csvQueue.add(
-    { bucket, objectKey },
+    { fileId, bucket, objectKey, options, type },
     {
       attempts: retries,
       backoff: {
@@ -61,19 +75,47 @@ const addCSVToQueue = async (bucket: string, objectKey: string) => {
 
 csvQueue.process(async (job: Job) => {
   try {
-    // const { bucket, objectKey, contentType } = await csv.uploadCSV(job.data);
-
+    const fileId: string = job.data.fileId;
     const bucket = storage.bucket(job.data.bucket);
     const file = bucket.file(job.data.objectKey);
+    const type: CSVJob = job.data.type;
+    const options: parserOptions = job.data.options;
 
     const [exists] = await file.exists();
     if (!exists) {
-      throw new Error(`File ${job.data.objectKey} does not exist`);
+      throw new Error("File does not exist");
+    }
+    let stats;
+
+    if (type === "courses") {
+      stats = await parser(file, { createdBy: options.createdBy });
+    }
+    if (type === "departments") {
+      stats = await parser(file);
+    }
+    if (type === "scores") {
+      stats = await parser(file, {
+        courseCode: options.courseCode,
+        semesterId: options.semesterId,
+      });
     }
 
-    const readStream = file.createReadStream();
+    // update file record;
+    if (stats) {
+      const inserted =
+        stats?.inserted.courses +
+        stats?.inserted.departments +
+        stats?.inserted.scores;
 
-    job.log("CSV file processed successfully: " + job.data);
+      await updateFileRecord(fileId, {
+        status: "completed",
+        totalRows: stats.processed,
+        insertedRows: inserted,
+        failedRows: stats.skipped,
+      });
+    }
+
+    job.log("CSV file processed successfully:\n " + "Stats: " + stats);
   } catch (e) {
     throw e;
   }

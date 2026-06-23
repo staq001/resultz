@@ -6,6 +6,7 @@ import {
   type otps,
   type courses,
   type emails,
+  type csv,
 } from "@/db/schema";
 import type { Context, Env } from "hono";
 import type z from "zod";
@@ -24,6 +25,7 @@ import type {
   createDepartmentSchema,
   updateDepartmentSchema,
 } from "@/schema/department.schema";
+import type { uploadCSVSchema } from "@/schema/csv.schema";
 import type {
   registerCourseSchema,
   updateRegisteredCourseSchema,
@@ -380,3 +382,43 @@ export type ParseScore = {
   testScore: string;
   examScore: string;
 };
+
+export type CsvRowType = "courses" | "departments" | "scores";
+
+export type CsvRow = Partial<ParseCourse & ParseScore> & {
+  type?: CsvRowType;
+  department?: string;
+  name?: string;
+  faculty?: string;
+};
+
+export type parserOptions = {
+  courseCode?: string;
+  semesterId?: string;
+  createdBy?: string;
+};
+
+export type ImportStats = {
+  processed: number;
+  skipped: number;
+  inserted: {
+    courses: number;
+    departments: number;
+    scores: number;
+  };
+};
+
+export type ScoreImportContext = {
+  courseId: string;
+  semesterId: string;
+};
+
+type UploadCSVSchema = z.infer<typeof uploadCSVSchema>;
+
+export type uploadCSVContext = Context<
+  AppEnv,
+  any,
+  { in: { json: UploadCSVSchema }; out: { json: UploadCSVSchema } }
+>;
+
+export type NewCSV = typeof csv.$inferInsert;
