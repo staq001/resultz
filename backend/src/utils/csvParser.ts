@@ -3,6 +3,7 @@ import { db } from "../db/mysql";
 import { logger } from "./logger";
 import type {
   CsvRow,
+  CsvRowType,
   ImportStats,
   NewCourse,
   NewDepartment,
@@ -21,10 +22,9 @@ import { and, eq } from "drizzle-orm";
 import { grading } from ".";
 import { NotFound } from "./error";
 
-const BATCH_SIZE = 500;
-
 export async function parser(
   file: { createReadStream: () => NodeJS.ReadableStream },
+  type: CsvRowType,
   options?: parserOptions,
 ): Promise<ImportStats> {
   const csvParser = csv.parse<CsvRow, CsvRow>({
@@ -49,14 +49,17 @@ export async function parser(
   };
 
   const scoreContext =
-    options && options.courseCode && options.semesterId
+    type === "scores" && options?.courseCode && options.semesterId
       ? await buildScoreImportContext(options.courseCode, options.semesterId)
       : null;
+  const departmentKeys = new Set<string>();
+  const courseCodes = new Set<string>();
+  const scoreKeys = new Set<string>();
 
   for await (const row of csvParser) {
     stats.processed++;
 
-    switch (row.type) {
+    switch (type) {
       case "departments": {
         const department = await transformDepartment(row);
 
@@ -65,11 +68,14 @@ export async function parser(
           break;
         }
 
-        departmentBatch.push(department);
-
-        if (departmentBatch.length >= BATCH_SIZE) {
-          stats.inserted.departments += await flushDepartments(departmentBatch);
+        const departmentKey = buildDepartmentKey(department);
+        if (departmentKeys.has(departmentKey)) {
+          stats.skipped++;
+          break;
         }
+
+        departmentKeys.add(departmentKey);
+        departmentBatch.push(department);
 
         break;
       }
@@ -91,11 +97,13 @@ export async function parser(
           break;
         }
 
-        courseBatch.push(course);
-
-        if (courseBatch.length >= BATCH_SIZE) {
-          stats.inserted.courses += await flushCourses(courseBatch);
+        if (courseCodes.has(course.courseCode)) {
+          stats.skipped++;
+          break;
         }
+
+        courseCodes.add(course.courseCode);
+        courseBatch.push(course);
 
         break;
       }
@@ -113,11 +121,15 @@ export async function parser(
           break;
         }
 
-        scoreBatch.push(score);
-
-        if (scoreBatch.length >= BATCH_SIZE) {
-          stats.inserted.scores += await flushScores(scoreBatch);
+        const scoreKey = buildScoreKey(score.registeredCourseId, score.userId);
+        if (scoreKeys.has(scoreKey)) {
+          stats.skipped++;
+          break;
         }
+
+        scoreKeys.add(scoreKey);
+        scoreContext.existingScoreSet.add(scoreKey);
+        scoreBatch.push(score);
 
         break;
       }
@@ -128,9 +140,11 @@ export async function parser(
     }
   }
 
-  stats.inserted.departments += await flushDepartments(departmentBatch);
-  stats.inserted.courses += await flushCourses(courseBatch);
-  stats.inserted.scores += await flushScores(scoreBatch);
+  stats.inserted = await persistImport({
+    departments: departmentBatch,
+    courses: courseBatch,
+    scores: scoreBatch,
+  });
 
   return stats;
 }
@@ -147,61 +161,75 @@ async function buildScoreImportContext(
     throw new NotFound("Course not found");
   }
 
+  const registrations = await db
+    .select({
+      registrationId: courseRegistrations.id,
+      userId: users.id,
+      matricNo: users.matricNo,
+      semester: courseRegistrations.semester,
+    })
+    .from(courseRegistrations)
+    .innerJoin(users, eq(courseRegistrations.userId, users.id))
+    .where(
+      and(
+        eq(courseRegistrations.courseId, course.id),
+        eq(courseRegistrations.semester, semesterId),
+      ),
+    );
+
+  const existingScores = await db
+    .select({
+      registeredCourseId: scoreCourses.registeredCourseId,
+      userId: scoreCourses.userId,
+    })
+    .from(scoreCourses)
+    .where(eq(scoreCourses.semester, semesterId));
+
   return {
     courseId: course.id,
     semesterId,
+    registrationMap: new Map(
+      registrations
+        .filter((registration) => registration.matricNo)
+        .map((registration) => [registration.matricNo as string, registration]),
+    ),
+    existingScoreSet: new Set(
+      existingScores.map((score) =>
+        buildScoreKey(score.registeredCourseId, score.userId),
+      ),
+    ),
   };
 }
 
-async function flushDepartments(batch: NewDepartment[]) {
-  if (batch.length === 0) {
-    return 0;
-  }
-
-  const count = batch.length;
-
-  try {
-    await db.insert(departments).values(batch);
-    batch.length = 0;
-    return count;
-  } catch (e: any) {
-    logger.error(
-      `Error inserting departments batch into database: ${e.message}`,
-    );
-    throw e;
-  }
-}
-
-async function flushCourses(batch: NewCourse[]) {
-  if (batch.length === 0) {
-    return 0;
-  }
-
-  const count = batch.length;
+async function persistImport(batch: {
+  departments: NewDepartment[];
+  courses: NewCourse[];
+  scores: NewScore[];
+}): Promise<ImportStats["inserted"]> {
+  const inserted = {
+    departments: batch.departments.length,
+    courses: batch.courses.length,
+    scores: batch.scores.length,
+  };
 
   try {
-    await db.insert(courses).values(batch);
-    batch.length = 0;
-    return count;
+    await db.transaction(async (tx) => {
+      if (batch.departments.length > 0) {
+        await tx.insert(departments).values(batch.departments);
+      }
+
+      if (batch.courses.length > 0) {
+        await tx.insert(courses).values(batch.courses);
+      }
+
+      if (batch.scores.length > 0) {
+        await tx.insert(scoreCourses).values(batch.scores);
+      }
+    });
+
+    return inserted;
   } catch (e: any) {
-    logger.error(`Error inserting courses batch into database: ${e.message}`);
-    throw e;
-  }
-}
-
-async function flushScores(batch: NewScore[]) {
-  if (batch.length === 0) {
-    return 0;
-  }
-
-  const count = batch.length;
-
-  try {
-    await db.insert(scoreCourses).values(batch);
-    batch.length = 0;
-    return count;
-  } catch (e: any) {
-    logger.error(`Error inserting scores batch into database: ${e.message}`);
+    logger.error(`Error persisting CSV import transaction: ${e.message}`);
     throw e;
   }
 }
@@ -223,6 +251,10 @@ async function transformDepartment(row: CsvRow): Promise<NewDepartment | null> {
   }
 
   return { name, faculty };
+}
+
+function buildDepartmentKey(department: NewDepartment) {
+  return `${department.name.trim().toLowerCase()}:${department.faculty.trim().toLowerCase()}`;
 }
 
 async function transformCourse(
@@ -300,38 +332,18 @@ async function transformScore(
     return null;
   }
 
-  const [registeredUser] = await db
-    .select({
-      registrationId: courseRegistrations.id,
-      userId: users.id,
-      semester: courseRegistrations.semester,
-    })
-    .from(courseRegistrations)
-    .innerJoin(users, eq(courseRegistrations.userId, users.id))
-    .where(
-      and(
-        eq(courseRegistrations.courseId, context.courseId),
-        eq(courseRegistrations.semester, context.semesterId),
-        eq(users.matricNo, matric_no),
-      ),
-    );
+  const registeredUser = context.registrationMap.get(matric_no);
 
   if (!registeredUser) {
     return null;
   }
 
-  const [existing] = await db
-    .select({ id: scoreCourses.id })
-    .from(scoreCourses)
-    .where(
-      and(
-        eq(scoreCourses.registeredCourseId, registeredUser.registrationId),
-        eq(scoreCourses.semester, context.semesterId),
-        eq(scoreCourses.userId, registeredUser.userId),
-      ),
-    );
+  const scoreKey = buildScoreKey(
+    registeredUser.registrationId,
+    registeredUser.userId,
+  );
 
-  if (existing) {
+  if (context.existingScoreSet.has(scoreKey)) {
     return null;
   }
 
@@ -343,4 +355,8 @@ async function transformScore(
     semester: registeredUser.semester,
     userId: registeredUser.userId,
   };
+}
+
+function buildScoreKey(registeredCourseId: string, userId: string) {
+  return `${registeredCourseId}:${userId}`;
 }

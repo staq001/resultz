@@ -17,10 +17,10 @@ export const csv = mysqlTable("csv", {
   bucket: varchar("bucket", { length: 255 }).notNull(),
   contentType: varchar("contentType", { length: 255 }).notNull(),
   objectKey: varchar("object_key", { length: 255 }).notNull(),
-  uploadedBy: varchar("object_key", { length: 255 })
+  uploadedBy: varchar("uploaded_by", { length: 255 })
     .notNull()
     .references(() => users.id),
-  status: mysqlEnum("status", ["processing", "completed"])
+  status: mysqlEnum("status", ["processing", "completed", "failed"])
     .notNull()
     .default("processing"),
   totalRows: int("total_rows"),

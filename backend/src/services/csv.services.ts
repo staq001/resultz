@@ -52,7 +52,7 @@ export class CSV {
         contentType: file.type,
       };
     } catch (e: any) {
-      logger.error("Error uploading csv file, ${e}");
+      logger.error(`Error uploading csv file: ${e.message}`);
       if (e instanceof BadRequest) throw e;
       if (e instanceof NotFound) throw e;
       throw new InternalServerError("Error uploading csv file");
@@ -62,8 +62,8 @@ export class CSV {
   async updateFileRecord(id: string, values: Partial<NewCSV>) {
     try {
       await db.update(csv).set(values).where(eq(csv.id, id));
-    } catch (e) {
-      logger.error("Error updating fetching file record;");
+    } catch (e: any) {
+      logger.error(`Error updating file record: ${e.message}`);
       throw e;
     }
   }

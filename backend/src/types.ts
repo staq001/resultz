@@ -411,6 +411,15 @@ export type ImportStats = {
 export type ScoreImportContext = {
   courseId: string;
   semesterId: string;
+  registrationMap: Map<
+    string,
+    {
+      registrationId: string;
+      userId: string;
+      semester: string;
+    }
+  >;
+  existingScoreSet: Set<string>;
 };
 
 type UploadCSVSchema = z.infer<typeof uploadCSVSchema>;

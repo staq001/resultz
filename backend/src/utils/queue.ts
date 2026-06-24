@@ -74,12 +74,13 @@ const addCSVToQueue = async (
 };
 
 csvQueue.process(async (job: Job) => {
+  const fileId: string | undefined = job.data.fileId;
+
   try {
-    const fileId: string = job.data.fileId;
     const bucket = storage.bucket(job.data.bucket);
     const file = bucket.file(job.data.objectKey);
     const type: CSVJob = job.data.type;
-    const options: parserOptions = job.data.options;
+    const options: parserOptions = job.data.options ?? {};
 
     const [exists] = await file.exists();
     if (!exists) {
@@ -88,20 +89,20 @@ csvQueue.process(async (job: Job) => {
     let stats;
 
     if (type === "courses") {
-      stats = await parser(file, { createdBy: options.createdBy });
+      stats = await parser(file, type, { createdBy: options.createdBy });
     }
     if (type === "departments") {
-      stats = await parser(file);
+      stats = await parser(file, type);
     }
     if (type === "scores") {
-      stats = await parser(file, {
+      stats = await parser(file, type, {
         courseCode: options.courseCode,
         semesterId: options.semesterId,
       });
     }
 
     // update file record;
-    if (stats) {
+    if (stats && fileId) {
       const inserted =
         stats?.inserted.courses +
         stats?.inserted.departments +
@@ -115,8 +116,14 @@ csvQueue.process(async (job: Job) => {
       });
     }
 
-    job.log("CSV file processed successfully:\n " + "Stats: " + stats);
-  } catch (e) {
+    const message = `CSV file processed successfully. Stats: ${JSON.stringify(stats)}`;
+    job.log(message);
+  } catch (e: any) {
+    if (fileId) {
+      await updateFileRecord(fileId, { status: "failed" });
+    }
+
+    logger.error(`CSV job ${job.id} failed: ${e.message}`);
     throw e;
   }
 });
