@@ -5,7 +5,6 @@ import { CSVController } from "@/controllers/csv.controller.ts";
 
 import { ScoreController } from "@/controllers/scoreCourses.controller";
 import { scoreCourseSchema } from "@/schema/scoreCourses.schema";
-import { uploadCSVSchema } from "@/schema/csv.schema";
 
 const { authentication, adminProtectedRoute, staffProtectedRoute } = new Auth();
 

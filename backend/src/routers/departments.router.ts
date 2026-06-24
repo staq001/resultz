@@ -4,7 +4,6 @@ import { Auth } from "@/middleware/auth";
 import { DepartmentController } from "@/controllers/department.controller";
 import { CSVController } from "@/controllers/csv.controller.ts";
 
-import { uploadCSVSchema } from "@/schema/csv.schema";
 import {
   createDepartmentSchema,
   updateDepartmentSchema,

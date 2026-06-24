@@ -9,8 +9,6 @@ const app = new Hono();
 
 import { CSVController } from "@/controllers/csv.controller.ts";
 
-import { uploadCSVSchema } from "@/schema/csv.schema";
-
 const { processCSV } = new CSVController();
 
 const {

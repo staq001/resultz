@@ -242,13 +242,16 @@ export class UserController {
     try {
       const { newUrl } = await this.userService.uploadAvatar(id, file);
 
-      return c.json({
-        status: 200,
-        message: "Avatar uploaded successfully!",
-        data: {
-          avatarUrl: newUrl,
+      return c.json(
+        {
+          status: 200,
+          message: "Avatar uploaded successfully!",
+          data: {
+            avatarUrl: newUrl,
+          },
         },
-      });
+        200,
+      );
     } catch (e: any) {
       return c.json(
         { message: e.message || "Internal Server Error" },

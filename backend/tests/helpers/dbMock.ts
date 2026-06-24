@@ -3,6 +3,8 @@ type AnyObj = Record<string, any>;
 function createDbMock() {
   let selectQueue: any[] = [];
   const queryResults: Record<string, any> = {};
+  const inserts: any[] = [];
+  const updates: any[] = [];
 
   function makeThenable(getResult: () => any) {
     const builder: AnyObj = {};
@@ -20,7 +22,15 @@ function createDbMock() {
   const api: AnyObj = {
     __clear() {
       selectQueue = [];
+      inserts.length = 0;
+      updates.length = 0;
       for (const k in queryResults) delete queryResults[k];
+    },
+    __getInserts() {
+      return inserts;
+    },
+    __getUpdates() {
+      return updates;
     },
     __pushSelectResult(res: any) {
       selectQueue.push(res);
@@ -75,7 +85,10 @@ function createDbMock() {
     },
     insert(table: any) {
       return {
-        values: async (_vals: any) => [{ affectedRows: 1 }],
+        values: async (vals: any) => {
+          inserts.push({ table, values: vals });
+          return [{ affectedRows: Array.isArray(vals) ? vals.length : 1 }];
+        },
       };
     },
     // update is defined via getter/setter below so tests can override it safely
@@ -138,8 +151,17 @@ function createDbMock() {
   // default update implementation (returns builder-like object)
   let _updateImpl = (table: any) => {
     const builder: AnyObj = {};
-    builder.set = (_obj: any) => builder;
-    builder.where = (..._args: any[]) => builder;
+    builder.set = (obj: any) => {
+      updates.push({ table, values: obj });
+      return builder;
+    };
+    builder.where = (...args: any[]) => {
+      updates[updates.length - 1] = {
+        ...(updates[updates.length - 1] ?? { table }),
+        where: args,
+      };
+      return builder;
+    };
     builder.limit = (_n: number) => builder;
     builder.then = makeThenable(() => [{ affectedRows: 1 }]).then;
     return builder;
@@ -154,8 +176,17 @@ function createDbMock() {
       // wrap assigned implementation so callers still get a builder with .set/.where
       _updateImpl = (table: any) => {
         const builder: AnyObj = {};
-        builder.set = (_obj: any) => builder;
-        builder.where = (..._args: any[]) => builder;
+        builder.set = (obj: any) => {
+          updates.push({ table, values: obj });
+          return builder;
+        };
+        builder.where = (...args: any[]) => {
+          updates[updates.length - 1] = {
+            ...(updates[updates.length - 1] ?? { table }),
+            where: args,
+          };
+          return builder;
+        };
         builder.limit = (_n: number) => builder;
         builder.then = (resolve: any, reject: any) => {
           try {
